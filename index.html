@@ -1,0 +1,1587 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>JustinSmash</title>
+<style>
+  :root{
+    --bg:#0a0a0f;
+    --panel:#12121a;
+    --panel-hover:#1a1a25;
+    --text:#e0e0e5;
+    --muted:#888;
+    --accent:#00d4ff;
+    --accent-dim:#0099cc;
+    --border:#2a2a35;
+    --hit-red:#ff4757;
+    --miss-red:#ff3838;
+    --gold:#ffd700;
+    --crit-orange:#ff6b00;
+    --success:#00ff88;
+    --shadow:0 4px 20px rgba(0,212,255,0.1);
+    --glow:0 0 20px rgba(0,212,255,0.3);
+  }
+  
+  *{box-sizing:border-box}
+  
+  html,body{height:100%;margin:0;color:var(--text);font-family:'Segoe UI',system-ui,Roboto,sans-serif;background:var(--bg);overflow:hidden}
+  
+  /* Top bar - centered with neon glow */
+  .top{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:16px;
+    background:linear-gradient(180deg, #0d0d15 0%, var(--bg) 100%);
+    border-bottom:1px solid var(--border);
+    position:relative;
+  }
+  .top::after{
+    content:'';
+    position:absolute;
+    bottom:0;
+    left:50%;
+    transform:translateX(-50%);
+    width:300px;
+    height:2px;
+    background:linear-gradient(90deg, transparent, var(--accent), transparent);
+  }
+  .top-inner{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    text-align:center;
+  }
+  .damage-big{
+    font-size:42px;
+    font-weight:800;
+    line-height:1.2;
+    background:linear-gradient(135deg, var(--accent) 0%, #fff 50%, var(--accent) 100%);
+    -webkit-background-clip:text;
+    -webkit-text-fill-color:transparent;
+    text-shadow:var(--glow);
+    animation:pulse 2s ease-in-out infinite;
+    margin-bottom:4px;
+  }
+  @keyframes pulse{
+    0%,100%{opacity:1}
+    50%{opacity:0.85}
+  }
+  .perclick{
+    font-size:16px;
+    font-weight:500;
+    color:var(--muted);
+    letter-spacing:0.5px;
+    line-height:1.2;
+  }
+  .perclick.active{
+    color:var(--gold);
+    text-shadow:0 0 10px rgba(255,215,0,0.5);
+  }
+
+  /* Layout */
+  .game{
+    display:grid;
+    grid-template-columns:220px 1fr 400px;
+    gap:16px;
+    padding:16px;
+    height:calc(100vh - 100px);
+  }
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:16px;
+    overflow:hidden;
+    box-shadow:var(--shadow);
+    transition:box-shadow 0.3s;
+  }
+  .panel:hover{
+    box-shadow:0 6px 30px rgba(0,212,255,0.15);
+  }
+  .panel h3{
+    margin:0 0 12px 0;
+    font-size:14px;
+    text-transform:uppercase;
+    letter-spacing:1px;
+    color:var(--accent);
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .list{display:flex;flex-direction:column;gap:10px}
+  .row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:10px 12px;
+    border-radius:8px;
+    background:rgba(255,255,255,0.02);
+    border:1px solid transparent;
+    transition:all 0.2s;
+  }
+  .row:hover{
+    background:var(--panel-hover);
+    border-color:var(--border);
+    transform:translateX(2px);
+  }
+  .btn{
+    background:linear-gradient(135deg, var(--accent) 0%, var(--accent-dim) 100%);
+    color:#000;
+    border:0;
+    padding:8px 14px;
+    border-radius:6px;
+    cursor:pointer;
+    font-weight:700;
+    font-size:12px;
+    transition:all 0.2s;
+    text-transform:uppercase;
+    letter-spacing:0.5px;
+    box-shadow:0 2px 8px rgba(0,212,255,0.3);
+  }
+  .btn:hover:not(:disabled){
+    transform:translateY(-2px);
+    box-shadow:0 4px 12px rgba(0,212,255,0.4);
+  }
+  .btn:active:not(:disabled){
+    transform:translateY(0);
+  }
+  .btn:disabled{
+    opacity:0.4;
+    cursor:default;
+    box-shadow:none;
+  }
+  .btn.secondary{
+    background:transparent;
+    border:1px solid var(--accent);
+    color:var(--accent);
+    box-shadow:none;
+  }
+  .btn.secondary:hover:not(:disabled){
+    background:rgba(0,212,255,0.1);
+  }
+  .muted{font-size:11px;color:var(--muted);line-height:1.4}
+
+  /* Arena */
+  .arena{
+    background:radial-gradient(ellipse at center, #1a1a2e 0%, #0a0a0f 100%);
+    border:1px solid var(--border);
+    border-radius:16px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    position:relative;
+    overflow:hidden;
+    box-shadow:inset 0 0 100px rgba(0,212,255,0.05);
+  }
+  .arena::before{
+    content:'';
+    position:absolute;
+    inset:0;
+    background:
+      linear-gradient(90deg, transparent 98%, rgba(0,212,255,0.03) 98%),
+      linear-gradient(0deg, transparent 98%, rgba(0,212,255,0.03) 98%);
+    background-size:50px 50px;
+    pointer-events:none;
+  }
+  .arena-inner{position:relative;width:100%;height:100%;}
+  .hammer{
+    position:absolute;
+    pointer-events:none;
+    will-change:transform,left,top,width,height;
+    transform-origin:0% 50%;
+    z-index:50;
+    filter:drop-shadow(0 4px 8px rgba(0,0,0,0.5));
+  }
+  .hammer.rest{
+    transition:transform 160ms cubic-bezier(.2,.9,.3,1);
+    transform:rotate(-18deg) translateY(0);
+  }
+  .hammer.down{
+    transition:none;
+    transform:rotate(40deg) translateY(14px) translateX(2px);
+  }
+  .roach{
+    position:absolute;
+    pointer-events:none;
+    will-change:left,top,transform,width,height;
+    transition:left 350ms cubic-bezier(.2,.9,.2,1), top 350ms cubic-bezier(.2,.9,.2,1), transform 150ms linear;
+    z-index:40;
+    filter:drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+  }
+  .roach.hit{
+    animation:roachHit 0.3s ease;
+  }
+  @keyframes roachHit{
+    0%{transform:scale(1)}
+    25%{transform:scale(0.9)}
+    50%{transform:scale(1.1)}
+    100%{transform:scale(1)}
+  }
+
+  /* floating popups */
+  .popup-container{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:80}
+  .popup{
+    position:absolute;
+    font-weight:800;
+    font-size:14px;
+    text-shadow:0 2px 4px rgba(0,0,0,0.8);
+    will-change:transform, opacity;
+    pointer-events:none;
+    text-align:center;
+    line-height:1.3;
+  }
+  .popup.crit{
+    font-size:32px;
+    font-weight:900;
+    color:var(--crit-orange);
+    text-shadow:0 0 20px rgba(255,107,0,0.8), 0 2px 4px rgba(0,0,0,0.5);
+    animation:critPulse 0.5s ease;
+  }
+  @keyframes critPulse{
+    0%{transform:scale(1)}
+    50%{transform:scale(1.2)}
+    100%{transform:scale(1)}
+  }
+  @keyframes floatUp{
+    0%{transform:translateY(0) scale(1);opacity:1}
+    100%{transform:translateY(-60px) scale(0.8);opacity:0}
+  }
+  @keyframes floatDown{
+    0%{transform:translateY(0);opacity:1}
+    100%{transform:translateY(40px);opacity:0}
+  }
+  @keyframes floatGold{
+    0%{transform:translateY(0) scale(1);opacity:1;color:var(--gold)}
+    100%{transform:translateY(-50px) scale(0.9);opacity:0}
+  }
+
+  /* Right panel tabs */
+  .tabs{display:flex;gap:8px;margin-bottom:12px}
+  .tabbtn{
+    background:transparent;
+    border:1px solid var(--border);
+    color:var(--muted);
+    padding:8px 16px;
+    border-radius:6px;
+    cursor:pointer;
+    font-weight:600;
+    font-size:12px;
+    transition:all 0.2s;
+    text-transform:uppercase;
+    letter-spacing:0.5px;
+    flex:1;
+  }
+  .tabbtn:hover{
+    border-color:var(--accent);
+    color:var(--text);
+  }
+  .tabbtn.active{
+    background:var(--accent);
+    color:#000;
+    border-color:var(--accent);
+  }
+
+  /* Shop halves */
+  .shop-container{height:calc(100% - 52px);display:flex;flex-direction:column;gap:10px}
+  .shop-half{
+    height:50%;
+    border:1px solid var(--border);
+    border-radius:10px;
+    overflow:auto;
+    padding:12px;
+    background:rgba(255,255,255,0.02);
+  }
+  .shop-half h4{
+    margin:0 0 12px 0;
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:1px;
+    color:var(--accent);
+    padding-bottom:8px;
+    border-bottom:1px solid var(--border);
+  }
+  .hammer-row{display:flex;align-items:center;gap:10px}
+  .hammer-icon{
+    width:40px;
+    height:40px;
+    object-fit:contain;
+    border-radius:6px;
+    background:rgba(0,212,255,0.05);
+    padding:4px;
+  }
+
+  /* Tooltip - FIXED with min-width */
+  .tooltip{
+    position:fixed;
+    background:var(--panel);
+    border:1px solid var(--accent);
+    border-radius:8px;
+    padding:12px;
+    font-size:12px;
+    box-shadow:0 8px 32px rgba(0,0,0,0.4), var(--glow);
+    z-index:2000;
+    max-width:320px;
+    min-width:220px;
+    color:var(--text);
+    line-height:1.5;
+  }
+  .tooltip strong{color:var(--accent)}
+
+  .right-stats{height:calc(100% - 52px);overflow:auto;padding:12px;background:rgba(255,255,255,0.02);border-radius:10px;border:1px solid var(--border)}
+
+  .save-buttons{display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+  .save-area{
+    width:100%;
+    height:260px;
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:12px;
+    overflow:auto;
+    background:rgba(0,0,0,0.3);
+    font-family:'Fira Code',monospace;
+    font-size:11px;
+    color:var(--text);
+    resize:none;
+  }
+  .save-area:focus{
+    outline:none;
+    border-color:var(--accent);
+  }
+
+  .footer{
+    padding:12px 16px;
+    font-size:11px;
+    color:var(--muted);
+    border-top:1px solid var(--border);
+    background:var(--bg);
+    text-align:center;
+  }
+
+  /* Achievement notification */
+  .achievement{
+    position:fixed;
+    top:20px;
+    right:20px;
+    background:linear-gradient(135deg, var(--panel) 0%, var(--panel-hover) 100%);
+    border:1px solid var(--accent);
+    border-radius:12px;
+    padding:16px 20px;
+    box-shadow:var(--glow);
+    z-index:3000;
+    transform:translateX(400px);
+    transition:transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    max-width:300px;
+  }
+  .achievement.show{transform:translateX(0)}
+  .achievement-title{
+    font-weight:700;
+    color:var(--accent);
+    font-size:14px;
+    margin-bottom:4px;
+  }
+  .achievement-desc{
+    font-size:12px;
+    color:var(--muted);
+  }
+
+  /* Combo meter */
+  .combo{
+    position:absolute;
+    top:20px;
+    left:20px;
+    font-size:48px;
+    font-weight:900;
+    color:var(--gold);
+    text-shadow:0 0 20px rgba(255,215,0,0.5);
+    opacity:0;
+    transition:opacity 0.3s;
+    z-index:60;
+    pointer-events:none;
+  }
+  .combo.active{opacity:1}
+  .combo.yellow{
+    color:#ffff00;
+    text-shadow:0 0 30px rgba(255,255,0,0.8), 0 0 60px rgba(255,255,0,0.4);
+  }
+  .combo.green{
+    color:#00ff00;
+    text-shadow:0 0 30px rgba(0,255,0,0.8), 0 0 60px rgba(0,255,0,0.4);
+  }
+  .combo.cyan{
+    color:#00ffff;
+    text-shadow:0 0 30px rgba(0,255,255,0.8), 0 0 60px rgba(0,255,255,0.4);
+  }
+  .combo.magenta{
+    color:#ff00ff;
+    text-shadow:0 0 30px rgba(255,0,255,0.8), 0 0 60px rgba(255,0,255,0.4);
+  }
+  .combo-text{font-size:14px;font-weight:600;color:var(--muted);text-transform:uppercase}
+
+  /* Particle effects */
+  .particle{
+    position:absolute;
+    pointer-events:none;
+    border-radius:50%;
+    z-index:45;
+  }
+
+  @media (max-width:1100px){
+    .game{grid-template-columns:1fr;grid-template-rows:auto 1fr auto;height:auto}
+    .panel{height:250px}
+    .arena{min-height:400px}
+  }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar{width:8px}
+  ::-webkit-scrollbar-track{background:var(--bg)}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+  ::-webkit-scrollbar-thumb:hover{background:var(--accent-dim)}
+</style>
+</head>
+<body>
+  <div class="top">
+    <div class="top-inner">
+      <div id="damageTop" class="damage-big">Damage: 0</div>
+      <div id="perClickTop" class="perclick">Per Click: 0</div>
+    </div>
+  </div>
+
+  <main class="game">
+    <aside class="panel" style="min-width:200px">
+      <h3>⚡ Power-Ups</h3>
+      <div id="powerUpsList" class="list"></div>
+    </aside>
+
+    <section class="arena" id="arena">
+      <div id="arenaInner" class="arena-inner">
+        <div class="combo" id="comboDisplay">
+          <div id="comboCount">0</div>
+          <div class="combo-text">Combo!</div>
+        </div>
+        <img id="roach" class="roach" src="victim.png" alt="justin" draggable="false" style="left:0;top:0;">
+        <img id="hammer" class="hammer" src="tier-1.png" alt="hammer" draggable="false">
+        <div class="popup-container" id="popupContainer"></div>
+      </div>
+    </section>
+
+    <aside class="panel" style="padding:12px;display:flex;flex-direction:column">
+      <div class="tabs">
+        <button id="tabShop" class="tabbtn active">Shop</button>
+        <button id="tabStats" class="tabbtn">Stats</button>
+        <button id="tabSave" class="tabbtn">Save</button>
+      </div>
+
+      <div id="shopArea" class="shop-container">
+        <div id="upgradesHalf" class="shop-half">
+          <h4>⬆ Upgrades</h4>
+          <div id="upgradesList" class="list"></div>
+        </div>
+
+        <div id="hammersHalf" class="shop-half">
+          <h4>🔨 Hammers</h4>
+          <div id="hammersList" class="list"></div>
+        </div>
+      </div>
+
+      <div id="statsArea" class="right-stats" style="display:none">
+        <h4 style="margin:0 0 12px 0;font-size:12px;text-transform:uppercase;color:var(--accent)">📊 Statistics</h4>
+        <div id="statsList" class="list"></div>
+      </div>
+
+      <div id="saveArea" class="right-stats" style="display:none;padding:12px;flex-direction:column">
+        <div class="save-buttons">
+          <button id="btnSave" class="btn">💾 Save</button>
+          <button id="btnExport" class="btn secondary">📤 Export</button>
+          <button id="btnImportToggle" class="btn secondary">📥 Import</button>
+        </div>
+        <div id="importBox" style="display:none">
+          <div style="margin-bottom:8px;font-size:11px;color:var(--muted)">Paste save data below:</div>
+          <textarea id="importData" class="save-area" placeholder='Paste save data here...'></textarea>
+          <div style="margin-top:10px;display:flex;gap:8px">
+            <button id="btnDoImport" class="btn">Import</button>
+            <button id="btnCancelImport" class="btn secondary">Cancel</button>
+          </div>
+        </div>
+        <div style="margin-top:12px;color:var(--muted);font-size:11px;line-height:1.5">
+          💡 Local saves use browser storage.<br>
+          Export creates a backup file you can keep safe.
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <div class="footer">Put images tier-1.png … tier-12.png and victim.png next to this file.</div>
+
+  <div class="achievement" id="achievementPopup">
+    <div class="achievement-title" id="achTitle">Achievement!</div>
+    <div class="achievement-desc" id="achDesc">Description</div>
+  </div>
+
+<script>
+
+const hammerProgression = [
+  { id:1, baseName:'Wood', displayName:'Wooden Hammer', file:'tier-1.png', baseDamageOriginal: 1, cost:10 },
+  { id:2, baseName:'Stone', displayName:'Stone Hammer', file:'tier-2.png', baseDamageOriginal: 10, cost:500 },
+  { id:3, baseName:'Iron', displayName:'Iron Hammer', file:'tier-3.png', baseDamageOriginal: 125, cost:7500 },
+  { id:4, baseName:'Reinforced Iron', displayName:'Reinforced Iron Hammer', file:'tier-4.png', baseDamageOriginal: 900, cost:50000 },
+  { id:5, baseName:'Tungsten', displayName:'Tungsten Hammer', file:'tier-5.png', baseDamageOriginal: 6500, cost:350000 },
+  { id:6, baseName:'Diamond', displayName:'Diamond Hammer', file:'tier-6.png', baseDamageOriginal: 33000, cost:2000000 },
+  { id:7, baseName:'Red Diamond', displayName:'Red Diamond Hammer', file:'tier-7.png', baseDamageOriginal: 205000, cost:15000000 },
+  { id:8, baseName:'Amethyst', displayName:'Amethyst Hammer', file:'tier-8.png', baseDamageOriginal: 1000000, cost:100000000 },
+  { id:9, baseName:'Black Hole', displayName:'Black Hole Hammer', file:'tier-9.png', baseDamageOriginal: 8500000, cost:800000000 },
+  { id:10, baseName:'Fire', displayName:'Fire Hammer', file:'tier-10.png', baseDamageOriginal: 45000000, cost:5000000000 },
+  { id:11, baseName:'Unobtanium', displayName:'Unobtanium Hammer', file:'tier-11.png', baseDamageOriginal: 300000000, cost:50000000000 },
+  { id:12, baseName:'AlgoMarbler', displayName:"AlgoMarbler's Hammer", file:'tier-12.png', baseDamageOriginal: 20000000000, cost:1000000000000 }
+];
+
+const sizePurchaseCosts = [0, 1000, 5000, 20000, 100000, 500000, 2500000, 12500000, 50000000, 200000000];
+
+const powerUps = [
+  { id:'boost', name:'Damage Boost', desc:'2× damage for 30s', baseCost:200, duration:30000, type:'mult', multiplier:2 },
+  { id:'discount', name:'Discount', desc:'-20% costs for 30 clicks', baseCost:500, duration:30000, type:'discount', durationClicks:30 },
+  { id:'critboost', name:'Critical Strike', desc:'All hits are Critical Hits (10× damage) for 10s', baseCost:800, duration:10000, type:'forcecrit' }
+];
+
+const forgeMultipliers = [0, 0.50, 1.00, 1.50, 2.00, 3.00, 4.00];
+const forgeCostMult = [0, 1, 2, 5, 10, 25, 50];
+const densityMultipliers = [0, 0.30, 0.50, 0.70, 0.85];
+const densityCostMult = [0, 3, 8, 15, 25];
+const pierceChance = [0, 5, 10, 15, 25, 35, 50];
+const pierceCostMult = [0, 2, 5, 10, 20, 35, 50];
+
+// Achievement rewards mapping
+const achievementRewards = {
+  'first_hit': { type: 'comboExtend', value: 10, desc: '+10 Combo Bonus!' },
+  '100_hits': { type: 'damageBoost', value: 2, duration: 30000, desc: '2× Damage Boost! (30 sec)' },
+  '1000_hits': { type: 'comboExtend', value: 50, desc: '+50 Combo Bonus!' },
+  '10000_hits': { type: 'damageBoost', value: 3, duration: 30000, desc: '3× Damage Boost! (30 sec)' },
+  'first_upgrade': { type: 'discount', desc: 'Free Discount Activated!' },
+  'max_size': { type: 'comboExtend', value: 250, desc: '+250 Combo Bonus!' },
+  'tier3': { type: 'damageBoost', value: 2, duration: 60000, desc: '2× Damage Boost (1 min)!' },
+  'tier6': { type: 'critBoost', duration: 15000, desc: 'Critical Strike (15s)!' },
+  'tier9': { type: 'comboExtend', value: 50, desc: '+50 Combo Bonus!' },
+  'tier12': { type: 'damageBoost', value: 5, duration: 120000, desc: '5× Damage Boost (2 min)!' },
+  'million': { type: 'comboExtend', value: 75, desc: '+75 Combo Bonus!' },
+  'billion': { type: 'critBoost', duration: 60000, desc: 'Critical Strike (1 min)!' },
+  'trillion': { type: 'critBoost', duration: 90000, desc: 'Critical Strike (1 min 30 sec)!' },
+  'quadrillion': { type: 'critBoost', duration: 120000, desc: 'Critical Strike (2 min)!' },
+  'combo10': { type: 'comboExtend', value: 5, desc: '+5 Combo Bonus!' },
+  'combo67': { type: 'damageBoost', value: 2, duration: 60000, desc: '2× Damage Boost (1 min)!' },
+  'combo500': { type: 'damageBoost', value: 5, duration: 90000, desc: '5× Damage Boost (1 min 30 sec)!' }
+};
+
+const achievements = [
+  { id:'first_hit', name:'First Blood', desc:'Land your first hit', check: (s) => s.hits >= 1 },
+  { id:'100_hits', name:'Justin Hunter', desc:'Smash 100 Justins', check: (s) => s.hits >= 100 },
+  { id:'1000_hits', name:'Justin Slayer', desc:'Smash 1,000 Justins', check: (s) => s.hits >= 1000 },
+  { id:'10000_hits', name:'Justin Exterminator', desc:'Smash 10,000 Justins', check: (s) => s.hits >= 10000 },
+  { id:'first_upgrade', name:'Getting Stronger', desc:'Buy your first upgrade', check: (s, h) => h.sizePurchases >= 1 },
+  { id:'max_size', name:'Heavy Hitter', desc:'Reach Mass V', check: (s, h) => h.sizePurchases >= 5 },
+  { id:'tier3', name:'Iron Will', desc:'Unlock Iron Hammer', check: (s) => s.owned.has(3) },
+  { id:'tier6', name:'Diamond Hands', desc:'Unlock Diamond Hammer', check: (s) => s.owned.has(6) },
+  { id:'tier9', name:'Event Horizon', desc:'Unlock Black Hole Hammer', check: (s) => s.owned.has(9) },
+  { id:'tier12', name:'Legend', desc:'Unlock AlgoMarbler\'s Hammer', check: (s) => s.owned.has(12) },
+  { id:'million', name:'Millionaire', desc:'Deal 1,000,000 total damage', check: (s) => s.totalDamage >= 1000000 },
+  { id:'billion', name:'Billionaire', desc:'Deal 1,000,000,000 total damage', check: (s) => s.totalDamage >= 1000000000 },
+  { id:'trillion', name:'Trillionaire', desc:'Deal 1,000,000,000,000 total damage', check: (s) => s.totalDamage >= 1000000000000 },
+  { id:'quadrillion', name:'Quadrillionaire', desc:'Deal 1,000,000,000,000,000 total damage', check: (s) => s.totalDamage >= 1000000000000000 },
+  { id:'combo10', name:'Combo Master', desc:'Get a 10x combo', check: (s, h, c) => c.maxCombo >= 10 },
+  { id:'combo67', name:'Combo God', desc:'Get a 67x combo', check: (s, h, c) => c.maxCombo >= 67 },
+  { id:'combo500', name:'Are You Even Human?', desc:'Get a 500x combo', check: (s, h, c) => c.maxCombo >= 500 }
+];
+
+let state = {
+  damageCurrency: 0,
+  totalDamage: 0,
+  equippedIndex: 0,
+  owned: new Set([1]),
+  permanentDamageBonus: 0,
+  multiplier: 1,
+  multiplierTimeout: null,
+  discountActive: false,
+  discountClicksRemaining: 0,
+  clicksTotal: 0,
+  hits: 0,
+  misses: 0,
+  forceCrit: false,
+  unlockedAchievements: new Set(),
+  startTime: Date.now()
+};
+
+powerUps.forEach(p => { state[p.id] = { purchases:0, activeUntil:0 }; });
+
+const hammerUpgrades = {};
+hammerProgression.forEach(h => {
+  hammerUpgrades[h.id] = { forge:0, density:0, pierce:0 };
+});
+
+let combo = { count: 0, timer: null, maxCombo: 0, bonus: 0 };
+let sizeUpgrade = { purchases: 0 };
+
+const damageTopEl = document.getElementById('damageTop');
+const perClickTopEl = document.getElementById('perClickTop');
+const hammerImg = document.getElementById('hammer');
+const roachImg = document.getElementById('roach');
+const arenaInner = document.getElementById('arenaInner');
+const popupContainer = document.getElementById('popupContainer');
+const comboDisplay = document.getElementById('comboDisplay');
+const comboCount = document.getElementById('comboCount');
+const achievementPopup = document.getElementById('achievementPopup');
+
+let arenaRect = null;
+let hammerSize = {width:120,height:120}, roachSize = {width:90,height:90};
+let damageHistory = [];
+
+function toRoman(num){
+  if (num <= 0) return 'I';
+  const romans = [[1000,'M'],[900,'CM'],[500,'D'],[400,'CD'],[100,'C'],[90,'XC'],[50,'L'],[40,'XL'],[10,'X'],[9,'IX'],[5,'V'],[4,'IV'],[1,'I']];
+  let res = '';
+  let n = num;
+  for (const [v,s] of romans){ while (n>=v){ res += s; n -= v; } }
+  return res;
+}
+
+function formatLargeDown(n){
+  if (!isFinite(n)) return '0';
+  const a = Math.abs(n);
+  const scales = [
+    { v: 1e63, name: 'Vigintillion' }, { v: 1e60, name: 'Novemdecillion' },
+    { v: 1e57, name: 'Octodecillion' }, { v: 1e54, name: 'Septendecillion' },
+    { v: 1e51, name: 'Sexdecillion' }, { v: 1e48, name: 'Quindecillion' },
+    { v: 1e45, name: 'Quattuordecillion' }, { v: 1e42, name: 'Tredecillion' },
+    { v: 1e39, name: 'Duodecillion' }, { v: 1e36, name: 'Undecillion' },
+    { v: 1e33, name: 'Decillion' }, { v: 1e30, name: 'Nonillion' },
+    { v: 1e27, name: 'Octillion' }, { v: 1e24, name: 'Septillion' },
+    { v: 1e21, name: 'Sextillion' }, { v: 1e18, name: 'Quintillion' },
+    { v: 1e15, name: 'Quadrillion' }, { v: 1e12, name: 'Trillion' },
+    { v: 1e9,  name: 'Billion' }, { v: 1e6,  name: 'Million' }
+  ];
+  for (let i=0; i<scales.length; i++){
+    const s = scales[i];
+    if (a >= s.v){
+      const raw = n / s.v;
+      const floored = Math.floor(raw * 100) / 100;
+      const str = floored.toFixed(2).replace(/\.?0+$/,'');
+      return str + ' ' + s.name;
+    }
+  }
+  return Math.floor(n).toLocaleString();
+}
+
+function abbrOne(n){
+  const large = formatLargeDown(n);
+  if (large && large.includes('illion')) return large;
+  if (!isFinite(n)) return '0';
+  if (n >= 1e6) return (n/1e6).toFixed(2) + 'M';
+  if (n >= 1e3) return (n/1e3).toFixed(1) + 'k';
+  return String(Math.floor(n));
+}
+
+function withCommas(n){
+  return formatLargeDown(n);
+}
+
+function ensureArenaRect(){
+  arenaRect = arenaInner.getBoundingClientRect();
+  return arenaRect;
+}
+
+function computeHammerDPCForIndex(idx){
+  const base = hammerProgression[idx].baseDamageOriginal;
+  const hId = hammerProgression[idx].id;
+  const forgeLevel = hammerUpgrades[hId]?.forge || 0;
+  const forgeAdd = forgeMultipliers[forgeLevel] || 0;
+  const sizeFactor = 1 + 0.25 * sizeUpgrade.purchases;
+  const dmg = Math.floor(base * (1 + forgeAdd) * sizeFactor + state.permanentDamageBonus);
+  return dmg;
+}
+
+function getDPC(){
+  const baseDPC = computeHammerDPCForIndex(state.equippedIndex);
+  const cur = Math.floor(baseDPC * state.multiplier);
+  return { current: cur, original: baseDPC };
+}
+
+function getComboBonus(){
+  // Combo bonus: +1% damage per combo hit, max +500%
+  return Math.min(combo.count * 0.01, 5.0);
+}
+
+function updateTop(){
+  damageTopEl.textContent = 'Damage: ' + abbrOne(state.damageCurrency);
+  const dpc = getDPC();
+  const comboBonus = getComboBonus();
+  if (state.multiplier !== 1 || comboBonus > 0){
+    perClickTopEl.classList.add('active');
+    let bonusText = '';
+    if (comboBonus > 0) bonusText += ` (+${Math.floor(comboBonus * 100)}% combo)`;
+    perClickTopEl.innerHTML = `Per Click: ${withCommas(Math.floor(dpc.current * (1 + comboBonus)))} <span style="font-weight:400;color:var(--muted)">(${withCommas(dpc.original)}${bonusText})</span>`;
+  } else {
+    perClickTopEl.classList.remove('active');
+    perClickTopEl.textContent = 'Per Click: ' + withCommas(dpc.original);
+  }
+}
+
+function pushDamageSample(){ 
+  damageHistory.push({t:Date.now(), v: state.totalDamage}); 
+  const cutoff = Date.now() - 6000; 
+  while (damageHistory.length && damageHistory[0].t < cutoff) damageHistory.shift(); 
+}
+
+function computeDPS5s(){ 
+  const now=Date.now(); 
+  const cutoff = now-5000; 
+  let earliest = damageHistory.find(s=>s.t>=cutoff) || damageHistory[0] || {t:now, v: state.totalDamage}; 
+  const last = damageHistory[damageHistory.length-1] || {t:now, v: state.totalDamage}; 
+  const delta = last.v - earliest.v; 
+  const sec = Math.max(1, (last.t - earliest.t)/1000); 
+  return Math.floor(delta / sec); 
+}
+
+function spawnParticles(x, y, color, count=8){
+  for (let i=0; i<count; i++){
+    const p = document.createElement('div');
+    p.className = 'particle';
+    const size = 4 + Math.random() * 8;
+    p.style.width = size + 'px';
+    p.style.height = size + 'px';
+    p.style.background = color;
+    p.style.left = x + 'px';
+    p.style.top = y + 'px';
+    const angle = (Math.PI * 2 * i) / count;
+    const velocity = 50 + Math.random() * 100;
+    const tx = Math.cos(angle) * velocity;
+    const ty = Math.sin(angle) * velocity;
+    p.style.transition = 'all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+    popupContainer.appendChild(p);
+    requestAnimationFrame(() => {
+      p.style.transform = `translate(${tx}px, ${ty}px) scale(0)`;
+      p.style.opacity = '0';
+    });
+    setTimeout(() => p.remove(), 600);
+  }
+}
+
+function spawnPopupAt(x, y, text, type='hit', {duration=900, critical=false, comboBonus=0}={}){
+  ensureArenaRect();
+  const pad = 12;
+  x = Math.max(pad, Math.min(x, arenaRect.width - pad));
+  y = Math.max(pad, Math.min(y, arenaRect.height - pad));
+
+  const p = document.createElement('div');
+  p.className = 'popup' + (critical ? ' crit' : '');
+  p.style.left = x + 'px';
+  p.style.top = y + 'px';
+  
+  let displayText = text;
+  if (comboBonus > 0) {
+    displayText += `\n(+${abbrOne(Math.floor(comboBonus))} COMBO!)`;
+  }
+  p.innerHTML = displayText.replace(/\n/g, '<br>');
+  
+  if (type === 'hit'){
+    p.style.color = critical ? 'var(--crit-orange)' : 'var(--hit-red)';
+    p.style.animation = `floatUp ${duration}ms forwards`;
+    if (critical) spawnParticles(x, y, '#ff6b00', 12);
+  } else if (type === 'miss'){
+    p.style.color = 'var(--miss-red)';
+    p.style.animation = `floatDown ${duration}ms forwards`;
+  } else {
+    p.style.color = 'var(--accent)';
+    p.style.animation = `floatGold ${duration}ms forwards`;
+  }
+  
+  popupContainer.appendChild(p);
+  setTimeout(() => p.remove(), duration + 100);
+}
+
+let tooltipEl = null;
+function showTooltip(html, clientX, clientY){
+  hideTooltip();
+  tooltipEl = document.createElement('div');
+  tooltipEl.className = 'tooltip';
+  tooltipEl.innerHTML = html;
+  document.body.appendChild(tooltipEl);
+  const pad = 12;
+  let left = clientX + 16;
+  let top = clientY + 16;
+  const rect = tooltipEl.getBoundingClientRect();
+  if (left + rect.width + pad > window.innerWidth) left = window.innerWidth - rect.width - pad;
+  if (top + rect.height + pad > window.innerHeight) top = window.innerHeight - rect.height - pad;
+  tooltipEl.style.left = left + 'px';
+  tooltipEl.style.top = top + 'px';
+}
+
+function hideTooltip(){ 
+  if (tooltipEl){ 
+    tooltipEl.remove(); 
+    tooltipEl = null; 
+  } 
+}
+
+function flashBad(){ 
+  arenaInner.parentElement.style.boxShadow = 'inset 0 0 50px rgba(255,71,87,0.3)'; 
+  setTimeout(() => arenaInner.parentElement.style.boxShadow = 'inset 0 0 100px rgba(0,212,255,0.05)', 300); 
+}
+
+function flashHit(){ 
+  arenaInner.parentElement.style.boxShadow = 'inset 0 0 60px rgba(0,212,255,0.2)'; 
+  setTimeout(() => arenaInner.parentElement.style.boxShadow = 'inset 0 0 100px rgba(0,212,255,0.05)', 150); 
+}
+
+function flashVictim(){
+  if (!roachImg) return;
+  roachImg.classList.add('hit');
+  const prevFilter = roachImg.style.filter;
+  roachImg.style.filter = 'sepia(1) saturate(8) hue-rotate(-30deg) brightness(1.3)';
+  setTimeout(() => {
+    roachImg.classList.remove('hit');
+    roachImg.style.filter = prevFilter;
+  }, 300);
+}
+
+function getEffectiveCost(cost){ 
+  return state.discountActive ? Math.ceil(cost * 0.8) : cost; 
+}
+
+function getHighestOwnedIndex(){
+  const ids = Array.from(state.owned).map(x => Number(x)).filter(x => !Number.isNaN(x));
+  if (ids.length === 0) return 0;
+  const highestId = Math.max(...ids);
+  for (let i = hammerProgression.length - 1; i >= 0; i--){ 
+    if (hammerProgression[i].id === highestId) return i; 
+  }
+  return 0;
+}
+
+function autoEquipHighestOwned(){
+  const idx = getHighestOwnedIndex();
+  state.equippedIndex = idx;
+  hammerImg.src = hammerProgression[idx].file;
+  applyHammerVisualSize();
+  updateTop();
+}
+
+function giveAchievementReward(achId){
+  const reward = achievementRewards[achId];
+  if (!reward) return;
+  
+  setTimeout(() => {
+    switch(reward.type){
+      case 'comboExtend':
+        combo.bonus += reward.value;
+        spawnPopupAt(arenaRect.width / 2, arenaRect.height / 2, `🏆 +${reward.value} COMBO!`, 'info', {duration: 1500});
+        break;
+      case 'damageBoost':
+        applyMultiplier(reward.value, reward.duration);
+        spawnPopupAt(arenaRect.width / 2, arenaRect.height / 2, `🏆 ${reward.value}× DAMAGE!`, 'info', {duration: 1500});
+        break;
+      case 'critBoost':
+        state.forceCrit = true;
+        setTimeout(() => { state.forceCrit = false; }, reward.duration);
+        spawnPopupAt(arenaRect.width / 2, arenaRect.height / 2, `🏆 CRITICAL STRIKE!`, 'info', {duration: 1500});
+        break;
+      case 'discount':
+        state.discountActive = true;
+        state.discountClicksRemaining = 50;
+        spawnPopupAt(arenaRect.width / 2, arenaRect.height / 2, `🏆 DISCOUNT ACTIVATED!`, 'info', {duration: 1500});
+        break;
+    }
+    updateTop();
+    buildPowerUps();
+  }, 500);
+}
+
+function checkAchievements(){
+  achievements.forEach(ach => {
+    if (!state.unlockedAchievements.has(ach.id) && ach.check(state, hammerUpgrades, combo)){
+      state.unlockedAchievements.add(ach.id);
+      showAchievement(ach.name, ach.desc);
+      giveAchievementReward(ach.id);
+    }
+  });
+}
+
+function showAchievement(title, desc){
+  document.getElementById('achTitle').textContent = '🏆 ' + title;
+  document.getElementById('achDesc').textContent = desc;
+  achievementPopup.classList.add('show');
+  setTimeout(() => achievementPopup.classList.remove('show'), 4000);
+}
+
+function updateComboVisuals(){
+  // Remove all combo classes
+  comboDisplay.classList.remove('yellow', 'green', 'cyan', 'magenta');
+  
+  if (combo.count >= 100) {
+    comboDisplay.classList.add('magenta');
+  } else if (combo.count >= 50) {
+    comboDisplay.classList.add('cyan');
+  } else if (combo.count >= 25) {
+    comboDisplay.classList.add('green');
+  } else if (combo.count >= 10) {
+    comboDisplay.classList.add('yellow');
+  }
+}
+
+function updateCombo(hit){
+  if (hit){
+    combo.count++;
+    if (combo.count > combo.maxCombo) combo.maxCombo = combo.count;
+    comboCount.textContent = combo.count + 'x';
+    comboDisplay.classList.add('active');
+    updateComboVisuals();
+    comboCount.style.transform = 'scale(1.3)';
+    setTimeout(() => comboCount.style.transform = 'scale(1)', 100);
+    
+    if (combo.timer) clearTimeout(combo.timer);
+    combo.timer = setTimeout(() => {
+      combo.count = 0;
+      combo.bonus = 0;
+      comboDisplay.classList.remove('active');
+      comboDisplay.classList.remove('yellow', 'green', 'cyan', 'magenta');
+      updateTop();
+    }, 2000);
+  } else {
+    combo.count = 0;
+    combo.bonus = 0;
+    comboDisplay.classList.remove('active');
+    comboDisplay.classList.remove('yellow', 'green', 'cyan', 'magenta');
+    updateTop();
+  }
+  updateTop();
+  checkAchievements();
+}
+
+function buildPowerUps(){
+  const container = document.getElementById('powerUpsList');
+  container.innerHTML = '';
+  powerUps.forEach(p => {
+    const r = document.createElement('div'); 
+    r.className = 'row';
+    const left = document.createElement('div'); 
+    left.style.flex = '1';
+    left.innerHTML = `<div style="font-weight:700;color:var(--text)">${p.name}</div><div class="muted">${p.desc}</div>`;
+    
+    const st = state[p.id];
+    const btn = document.createElement('button'); 
+    btn.className = 'btn';
+    const currentCost = Math.max(1, Math.floor(p.baseCost * Math.pow(1.5, st.purchases || 0)));
+    const now = Date.now();
+    
+    if (st.activeUntil && now < st.activeUntil){
+      const remaining = Math.ceil((st.activeUntil - now) / 1000);
+      btn.textContent = `Active ${remaining}s`;
+      btn.disabled = true;
+      btn.style.background = 'var(--success)';
+    } else {
+      const cost = getEffectiveCost(currentCost);
+      btn.textContent = abbrOne(cost);
+      btn.onclick = () => {
+        if (state.damageCurrency >= cost){
+          state.damageCurrency -= cost;
+          st.purchases = (st.purchases || 0) + 1;
+          st.activeUntil = Date.now() + p.duration;
+          activatePowerUp(p);
+          buildPowerUps(); 
+          updateTop();
+        } else {
+          flashBad();
+        }
+      };
+    }
+    
+    r.addEventListener('mouseenter', (ev) => {
+      const c = (st.activeUntil && Date.now() < st.activeUntil) ? `⏱️ ${Math.ceil((st.activeUntil-Date.now())/1000)}s remaining<br>` : '';
+      let extraInfo = '';
+      if (p.id === 'critboost') {
+        extraInfo = '<br><br>💥 <strong>Critical Hit</strong> = 10× damage hit!';
+      }
+      showTooltip(`${c}<strong>${p.name}</strong><br>${p.desc}${extraInfo}<br><br>Base cost: ${abbrOne(p.baseCost)}<br>Owned: ${st.purchases}x`, ev.clientX, ev.clientY);
+    });
+    r.addEventListener('mousemove', (ev) => {
+      if (tooltipEl){
+        tooltipEl.style.left = (ev.clientX + 16) + 'px';
+        tooltipEl.style.top = (ev.clientY + 16) + 'px';
+      }
+    });
+    r.addEventListener('mouseleave', hideTooltip);
+    
+    r.appendChild(left); 
+    r.appendChild(btn); 
+    container.appendChild(r);
+  });
+}
+
+function activatePowerUp(p){
+  if (p.type === 'mult'){
+    applyMultiplier(p.multiplier || 2, p.duration);
+    spawnPopupAt(arenaRect.width / 2, 40, `⚡ ${p.multiplier || 2}× DAMAGE!`, 'info');
+  } else if (p.type === 'discount'){
+    state.discountActive = true;
+    state.discountClicksRemaining = p.durationClicks || 30;
+    spawnPopupAt(arenaRect.width / 2, 40, '🏷️ DISCOUNT ACTIVE!', 'info');
+  } else if (p.type === 'forcecrit'){
+    state.forceCrit = true;
+    state[p.id].activeUntil = Date.now() + p.duration;
+    setTimeout(() => { state.forceCrit = false; }, p.duration);
+    spawnPopupAt(arenaRect.width / 2, 40, '💥 CRITICAL STRIKE!', 'info');
+  }
+}
+
+function applyMultiplier(mult, duration){
+  if (state.multiplierTimeout) clearTimeout(state.multiplierTimeout);
+  state.multiplier *= mult;
+  state.multiplierTimeout = setTimeout(() => {
+    state.multiplier /= mult;
+    state.multiplierTimeout = null;
+    updateTop();
+    buildPowerUps();
+  }, duration);
+  updateTop();
+}
+
+function buildUpgrades(){
+  const container = document.getElementById('upgradesList');
+  container.innerHTML = '';
+
+  // Mass upgrade
+  const massRow = document.createElement('div'); 
+  massRow.className = 'row';
+  const massLeft = document.createElement('div'); 
+  massLeft.style.flex = '1';
+  const massLabel = `Mass ${toRoman(Math.max(1, sizeUpgrade.purchases + 1))}`;
+  const curBonus = sizeUpgrade.purchases * 25;
+  massLeft.innerHTML = `<div style="font-weight:700">${massLabel}</div><div class="muted">+${curBonus}% damage & size</div>`;
+  
+  const massNextCost = sizePurchaseCosts[Math.min(sizeUpgrade.purchases, sizePurchaseCosts.length - 1)] || 
+    Math.floor(sizePurchaseCosts[sizePurchaseCosts.length - 1] * Math.pow(1.5, sizeUpgrade.purchases - sizePurchaseCosts.length + 1));
+  const massBtn = document.createElement('button'); 
+  massBtn.className = 'btn';
+  const massEffCost = getEffectiveCost(massNextCost);
+  
+  massBtn.textContent = `Buy ${abbrOne(massEffCost)}`;
+  massBtn.onclick = () => {
+    if (state.damageCurrency >= massEffCost){
+      state.damageCurrency -= massEffCost;
+      sizeUpgrade.purchases++;
+      applyHammerVisualSize();
+      updateTop();
+      buildUpgrades();
+      buildHammers();
+      checkAchievements();
+    } else {
+      flashBad();
+    }
+  };
+  
+  massRow.addEventListener('mouseenter', (ev) => {
+    const nextBonus = (sizeUpgrade.purchases + 1) * 25;
+    showTooltip(`<strong>Mass Upgrade</strong><br>Increases hammer size and base damage by 25% per level.<br><br>Current: +${curBonus}%<br>Next: +${nextBonus}%<br>Purchased: ${sizeUpgrade.purchases}<br>Cost: ${abbrOne(massNextCost)}`, ev.clientX, ev.clientY);
+  });
+  massRow.addEventListener('mousemove', (ev) => {
+    if (tooltipEl){
+      tooltipEl.style.left = (ev.clientX + 16) + 'px';
+      tooltipEl.style.top = (ev.clientY + 16) + 'px';
+    }
+  });
+  massRow.addEventListener('mouseleave', hideTooltip);
+  
+  massRow.appendChild(massLeft); 
+  massRow.appendChild(massBtn); 
+  container.appendChild(massRow);
+
+  // Hammer-specific upgrades
+  const h = hammerProgression[state.equippedIndex];
+  if (!h) return;
+
+  const hUp = hammerUpgrades[h.id] || { forge:0, density:0, pierce:0 };
+
+  function createUpgradeRow(name, key, current, max, costMult, getEffect){
+    const row = document.createElement('div'); 
+    row.className = 'row';
+    const left = document.createElement('div'); 
+    left.style.flex = '1';
+    left.innerHTML = `<div style="font-weight:700">${h.baseName} ${name}</div><div class="muted">Level ${current}/${max}</div>`;
+    
+    const btn = document.createElement('button'); 
+    btn.className = 'btn';
+    const nextLevel = Math.min(current + 1, max);
+    const levelCost = Math.max(1, Math.floor(h.baseDamageOriginal * 10 * (costMult[nextLevel] || 1)));
+    
+    if (current >= max){
+      btn.textContent = 'MAXED';
+      btn.disabled = true;
+    } else {
+      const effCost = getEffectiveCost(levelCost);
+      btn.textContent = abbrOne(effCost);
+      btn.onclick = () => {
+        if (state.damageCurrency >= effCost){
+          state.damageCurrency -= effCost;
+          hUp[key] = nextLevel;
+          hammerUpgrades[h.id] = hUp;
+          buildUpgrades();
+          buildHammers();
+          updateTop();
+          checkAchievements();
+        } else {
+          flashBad();
+        }
+      };
+    }
+    
+    row.addEventListener('mouseenter', (ev) => {
+      const curEffect = getEffect(current);
+      const nextEffect = current >= max ? null : getEffect(nextLevel);
+      let tooltipContent = `<strong>${h.baseName} ${name}</strong><br>Current: ${curEffect}`;
+      if (nextEffect) tooltipContent += `<br>Next: ${nextEffect}`;
+      tooltipContent += `<br><br>Cost: ${current >= max ? 'MAXED' : abbrOne(levelCost)}`;
+      if (name === 'Pierce') {
+        tooltipContent += '<br><br>💥 Critical Hits deal 10× damage!';
+      }
+      showTooltip(tooltipContent, ev.clientX, ev.clientY);
+    });
+    row.addEventListener('mousemove', (ev) => {
+      if (tooltipEl){
+        tooltipEl.style.left = (ev.clientX + 16) + 'px';
+        tooltipEl.style.top = (ev.clientY + 16) + 'px';
+      }
+    });
+    row.addEventListener('mouseleave', hideTooltip);
+    
+    row.appendChild(left); 
+    row.appendChild(btn); 
+    container.appendChild(row);
+  }
+
+  createUpgradeRow('Forge', 'forge', hUp.forge, 6, forgeCostMult,
+    (lvl) => `+${Math.floor((forgeMultipliers[lvl] || 0) * 100)}% damage`
+  );
+
+  createUpgradeRow('Density', 'density', hUp.density, 4, densityCostMult,
+    (lvl) => `${Math.floor((densityMultipliers[lvl] || 0) * 100)}% slower Justin`
+  );
+
+  createUpgradeRow('Pierce', 'pierce', hUp.pierce, 6, pierceCostMult,
+    (lvl) => `${pierceChance[lvl] || 0}% Critical Hit chance`
+  );
+}
+
+function buildHammers(){
+  const container = document.getElementById('hammersList');
+  container.innerHTML = '';
+
+  hammerProgression.forEach((h, idx) => {
+    const r = document.createElement('div'); 
+    r.className = 'row';
+    const left = document.createElement('div'); 
+    left.style.flex = '1';
+    
+    const icon = document.createElement('img'); 
+    icon.src = h.file; 
+    icon.className = 'hammer-icon'; 
+    icon.alt = h.displayName;
+    
+    const meta = document.createElement('div'); 
+    meta.className = 'hammer-row';
+    const nameEl = document.createElement('div'); 
+    nameEl.innerHTML = `<div style="font-weight:700">${h.displayName}</div><div class="muted">Damage Per Click: ${withCommas(computeHammerDPCForIndex(idx))}</div>`;
+    meta.appendChild(icon); 
+    meta.appendChild(nameEl);
+    left.appendChild(meta);
+
+    const slot = document.createElement('div'); 
+    slot.style.display = 'flex'; 
+    slot.style.flexDirection = 'column'; 
+    slot.style.alignItems = 'flex-end'; 
+    slot.style.gap = '6px';
+
+    const owned = state.owned.has(h.id);
+
+    if (owned){
+      const equipBtn = document.createElement('button'); 
+      equipBtn.className = 'btn';
+      equipBtn.textContent = state.equippedIndex === idx ? '✓ Equipped' : 'Equip';
+      equipBtn.disabled = (state.equippedIndex === idx);
+      equipBtn.onclick = () => {
+        state.equippedIndex = idx;
+        hammerImg.src = h.file;
+        applyHammerVisualSize();
+        updateTop();
+        buildHammers();
+        buildUpgrades();
+      };
+      slot.appendChild(equipBtn);
+    } else {
+      const cost = getEffectiveCost(h.cost);
+      const costBtn = document.createElement('button'); 
+      costBtn.className = 'btn';
+      costBtn.textContent = abbrOne(cost);
+      costBtn.onclick = () => {
+        if (state.damageCurrency >= cost){
+          state.damageCurrency -= cost;
+          state.owned.add(h.id);
+          autoEquipHighestOwned();
+          if (!hammerUpgrades[h.id]) hammerUpgrades[h.id] = { forge:0, density:0, pierce:0 };
+          buildHammers();
+          buildUpgrades();
+          buildPowerUps();
+          updateTop();
+          checkAchievements();
+        } else {
+          flashBad();
+        }
+      };
+      slot.appendChild(costBtn);
+    }
+
+    r.appendChild(left); 
+    r.appendChild(slot);
+    container.appendChild(r);
+  });
+}
+
+function buildStats(){
+  const container = document.getElementById('statsList');
+  container.innerHTML = '';
+  
+  const playTime = Math.floor((Date.now() - state.startTime) / 1000);
+  const hours = Math.floor(playTime / 3600);
+  const minutes = Math.floor((playTime % 3600) / 60);
+  const seconds = playTime % 60;
+  
+  const items = [
+    `💰 Total Damage: ${withCommas(state.totalDamage)}`,
+    `⚡ DPS (5s): ${withCommas(computeDPS5s())}`,
+    `🎯 Hits: ${withCommas(state.hits)}`,
+    `❌ Misses: ${withCommas(state.misses)}`,
+    `📊 Accuracy: ${state.clicksTotal > 0 ? ((state.hits / state.clicksTotal) * 100).toFixed(1) : 0}%`,
+    `🔥 Best Combo: ${combo.maxCombo}x`,
+    `🏆 Achievements: ${state.unlockedAchievements.size}/${achievements.length}`,
+    `⏱️ Play Time: ${hours}h ${minutes}m ${seconds}s`,
+    state.discountActive ? `🏷️ Discount: ${state.discountClicksRemaining} clicks` : ''
+  ].filter(Boolean);
+
+  items.forEach(it => {
+    const row = document.createElement('div'); 
+    row.className = 'row'; 
+    row.innerHTML = `<div style="flex:1;font-size:13px">${it}</div>`;
+    container.appendChild(row);
+  });
+}
+
+function applyHammerVisualSize(){
+  ensureArenaRect();
+  const baseline = Math.max(12, Math.round(arenaRect.width * 0.10));
+  const scale = 1 + 0.25 * sizeUpgrade.purchases;
+  const width = Math.round(baseline * scale);
+  hammerImg.style.width = width + 'px';
+  const natW = hammerImg.naturalWidth || width;
+  const natH = hammerImg.naturalHeight || width;
+  hammerSize.width = width;
+  hammerSize.height = Math.max(8, Math.round(natH * (width / natW)));
+  hammerImg.style.height = hammerSize.height + 'px';
+}
+
+function onArenaMove(e){
+  ensureArenaRect();
+  const x = e.clientX - arenaRect.left;
+  const y = e.clientY - arenaRect.top;
+  const left = x - hammerSize.width;
+  const top = y - hammerSize.height * 0.5;
+  hammerImg.style.left = clamp(left, 0, Math.max(0, arenaRect.width - hammerSize.width)) + 'px';
+  hammerImg.style.top = clamp(top, 0, Math.max(0, arenaRect.height - hammerSize.height)) + 'px';
+}
+
+function onArenaClick(e){
+  ensureArenaRect();
+  hammerImg.classList.remove('rest');
+  hammerImg.classList.add('down');
+  void hammerImg.offsetWidth;
+  requestAnimationFrame(() => {
+    hammerImg.classList.remove('down');
+    hammerImg.classList.add('rest');
+  });
+
+  const clickX = e.clientX - arenaRect.left;
+  const clickY = e.clientY - arenaRect.top;
+  state.clicksTotal++;
+
+  if (state.discountActive){
+    state.discountClicksRemaining--;
+    if (state.discountClicksRemaining <= 0){
+      state.discountActive = false;
+      state.discountClicksRemaining = 0;
+    }
+  }
+
+  const rbox = roachImg.getBoundingClientRect();
+  const relLeft = rbox.left - arenaRect.left;
+  const relTop = rbox.top - arenaRect.top;
+  const relRight = relLeft + roachSize.width;
+  const relBottom = relTop + roachSize.height;
+  const hit = (clickX >= relLeft && clickX <= relRight && clickY >= relTop && clickY <= relBottom);
+
+  if (hit){
+    state.hits++;
+    updateCombo(true);
+    performHit(false, clickX, clickY);
+  } else {
+    state.misses++;
+    updateCombo(false);
+    spawnPopupAt(clickX, clickY, 'MISS!', 'miss');
+    roachImg.style.transform = 'translateY(-8px)';
+    setTimeout(() => roachImg.style.transform = '', 150);
+  }
+}
+
+function performHit(isAuto = false, clickX = null, clickY = null){
+  const dpcBaseObj = getDPC();
+  let damageToApply = dpcBaseObj.current;
+
+  const equippedHammerId = hammerProgression[state.equippedIndex].id;
+  const pierceLevel = hammerUpgrades[equippedHammerId]?.pierce || 0;
+  const piercePct = pierceChance[pierceLevel] || 0;
+  const now = Date.now();
+  const forceCritActive = state.forceCrit || (state['critboost']?.activeUntil && now < state['critboost'].activeUntil);
+  const isCrit = forceCritActive || (Math.random() * 100 < piercePct);
+
+  if (isCrit){
+    damageToApply *= 10;
+    flashVictim();
+  }
+
+  // Apply combo bonus (+10% per combo, max 500%)
+  const comboBonus = getComboBonus();
+  const baseDamage = damageToApply;
+  damageToApply = Math.floor(damageToApply * (1 + comboBonus));
+  const comboDamage = damageToApply - baseDamage;
+
+  state.totalDamage += damageToApply;
+  state.damageCurrency += damageToApply;
+  pushDamageSample();
+
+  ensureArenaRect();
+  const rbox = roachImg.getBoundingClientRect();
+  const relLeft = rbox.left - arenaRect.left;
+  const relTop = rbox.top - arenaRect.top;
+  const rcx = relLeft + roachSize.width / 2;
+  const rcy = relTop + roachSize.height / 2;
+  
+  spawnPopupAt(rcx, rcy, '+' + abbrOne(damageToApply), 'hit', { duration: 900, critical: isCrit, comboBonus: comboDamage > 0 ? comboDamage : 0 });
+
+  if (clickX === null || clickY === null){
+    moveRoachRandom();
+  } else {
+    moveRoachWithinHalf(clickX, clickY, equippedHammerId);
+  }
+
+  flashHit();
+  updateTop();
+  checkAchievements();
+}
+
+function moveRoachRandom(){
+  ensureArenaRect();
+  const margin = Math.max(10, Math.round(Math.min(arenaRect.width, arenaRect.height) * 0.05));
+  const maxX = Math.max(0, arenaRect.width - roachSize.width - margin);
+  const maxY = Math.max(0, arenaRect.height - roachSize.height - margin);
+  const left = margin + Math.random() * (maxX - margin);
+  const top = margin + Math.random() * (maxY - margin);
+  roachImg.style.left = left + 'px';
+  roachImg.style.top = top + 'px';
+  roachImg.style.transform = Math.random() > 0.5 ? 'scaleX(1)' : 'scaleX(-1)';
+}
+
+function moveRoachWithinHalf(clickX, clickY, hammerId){
+  ensureArenaRect();
+  const radius = Math.min(arenaRect.width, arenaRect.height) / 2;
+  const ang = Math.random() * Math.PI * 2;
+  let dist = Math.random() * radius;
+  const densityLevel = hammerUpgrades[hammerId]?.density || 0;
+  const densityReduction = densityMultipliers[densityLevel] || 0;
+  dist = dist * (1 - densityReduction);
+
+  let tx = clickX + Math.cos(ang) * dist;
+  let ty = clickY + Math.sin(ang) * dist;
+  const margin = Math.max(10, Math.round(Math.min(arenaRect.width, arenaRect.height) * 0.05));
+  const minCx = roachSize.width / 2 + margin;
+  const minCy = roachSize.height / 2 + margin;
+  const maxCx = arenaRect.width - roachSize.width / 2 - margin;
+  const maxCy = arenaRect.height - roachSize.height / 2 - margin;
+  tx = clamp(tx, minCx, maxCx);
+  ty = clamp(ty, minCy, maxCy);
+  roachImg.style.left = (tx - roachSize.width / 2) + 'px';
+  roachImg.style.top = (ty - roachSize.height / 2) + 'px';
+  roachImg.style.transform = Math.random() > 0.5 ? 'scaleX(1)' : 'scaleX(-1)';
+}
+
+function clamp(v, a, b){ 
+  return Math.max(a, Math.min(b, v)); 
+}
+
+function saveToLocal(){
+  const save = {
+    damageCurrency: state.damageCurrency,
+    totalDamage: state.totalDamage,
+    equippedIndex: state.equippedIndex,
+    owned: Array.from(state.owned),
+    permanentDamageBonus: state.permanentDamageBonus,
+    sizePurchases: sizeUpgrade.purchases,
+    discountActive: state.discountActive,
+    discountClicksRemaining: state.discountClicksRemaining,
+    clicksTotal: state.clicksTotal,
+    hits: state.hits,
+    misses: state.misses,
+    hammerUpgrades: hammerUpgrades,
+    unlockedAchievements: Array.from(state.unlockedAchievements),
+    powerStates: powerUps.reduce((acc, p) => { acc[p.id] = state[p.id]; return acc; }, {})
+  };
+  localStorage.setItem('smashJustinSave', JSON.stringify(save));
+  alert('💾 Game saved!');
+}
+
+function exportSaveAsFile(){
+  const save = localStorage.getItem('smashJustinSave') || JSON.stringify({});
+  const blob = new Blob([save], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `smashJustin_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importFromJSON(jsonStr){
+  try {
+    const s = JSON.parse(jsonStr);
+    state.damageCurrency = s.damageCurrency || 0;
+    state.totalDamage = s.totalDamage || 0;
+    state.equippedIndex = s.equippedIndex || 0;
+    state.owned = new Set(s.owned || [1]);
+    state.permanentDamageBonus = s.permanentDamageBonus || 0;
+    sizeUpgrade.purchases = s.sizePurchases || 0;
+    state.discountActive = s.discountActive || false;
+    state.discountClicksRemaining = s.discountClicksRemaining || 0;
+    state.clicksTotal = s.clicksTotal || 0;
+    state.hits = s.hits || 0;
+    state.misses = s.misses || 0;
+    state.unlockedAchievements = new Set(s.unlockedAchievements || []);
+    
+    if (s.hammerUpgrades){
+      for (const id in s.hammerUpgrades) hammerUpgrades[id] = s.hammerUpgrades[id];
+    }
+    if (s.powerStates){
+      for (const id in s.powerStates) state[id] = s.powerStates[id];
+    }
+    
+    hammerImg.src = hammerProgression[state.equippedIndex].file;
+    applyHammerVisualSize();
+    updateTop();
+    buildPowerUps();
+    buildUpgrades();
+    buildHammers();
+    buildStats();
+    checkAchievements();
+    alert('📥 Save loaded successfully!');
+  } catch (err){
+    alert('❌ Import failed: Invalid save data');
+  }
+}
+
+function init(){
+  ensureArenaRect();
+
+  hammerImg.onload = () => {
+    applyHammerVisualSize();
+    hammerImg.classList.add('rest');
+    hammerImg.style.left = Math.round(arenaRect.width / 2) + 'px';
+    hammerImg.style.top = Math.round(arenaRect.height / 2) + 'px';
+  };
+
+  roachImg.onload = () => {
+    ensureArenaRect();
+    const approx = Math.max(50, Math.min(120, Math.round(arenaRect.width * 0.12)));
+    roachImg.style.width = approx + 'px';
+    const natW = roachImg.naturalWidth || approx;
+    const natH = roachImg.naturalHeight || approx;
+    roachSize.width = approx;
+    roachSize.height = Math.max(30, Math.round(natH * (approx / natW)));
+    roachImg.style.height = roachSize.height + 'px';
+    moveRoachRandom();
+  };
+
+  autoEquipHighestOwned();
+  hammerImg.src = hammerProgression[state.equippedIndex].file;
+
+  arenaInner.addEventListener('mousemove', onArenaMove);
+  arenaInner.addEventListener('click', onArenaClick);
+  
+  window.addEventListener('resize', () => {
+    ensureArenaRect();
+    applyHammerVisualSize();
+    moveRoachRandom();
+  });
+
+  document.getElementById('tabShop').onclick = () => {
+    document.getElementById('tabShop').classList.add('active');
+    document.getElementById('tabStats').classList.remove('active');
+    document.getElementById('tabSave').classList.remove('active');
+    document.getElementById('shopArea').style.display = 'flex';
+    document.getElementById('statsArea').style.display = 'none';
+    document.getElementById('saveArea').style.display = 'none';
+  };
+
+  document.getElementById('tabStats').onclick = () => {
+    document.getElementById('tabStats').classList.add('active');
+    document.getElementById('tabShop').classList.remove('active');
+    document.getElementById('tabSave').classList.remove('active');
+    document.getElementById('shopArea').style.display = 'none';
+    document.getElementById('statsArea').style.display = 'block';
+    document.getElementById('saveArea').style.display = 'none';
+  };
+
+  document.getElementById('tabSave').onclick = () => {
+    document.getElementById('tabSave').classList.add('active');
+    document.getElementById('tabShop').classList.remove('active');
+    document.getElementById('tabStats').classList.remove('active');
+    document.getElementById('shopArea').style.display = 'none';
+    document.getElementById('statsArea').style.display = 'none';
+    document.getElementById('saveArea').style.display = 'block';
+  };
+
+  document.getElementById('btnSave').addEventListener('click', saveToLocal);
+  document.getElementById('btnExport').addEventListener('click', exportSaveAsFile);
+  document.getElementById('btnImportToggle').addEventListener('click', () => {
+    const b = document.getElementById('importBox');
+    b.style.display = b.style.display === 'block' ? 'none' : 'block';
+  });
+  document.getElementById('btnCancelImport').addEventListener('click', () => {
+    document.getElementById('importBox').style.display = 'none';
+  });
+  document.getElementById('btnDoImport').addEventListener('click', () => {
+    const txt = document.getElementById('importData').value;
+    importFromJSON(txt);
+  });
+
+  buildPowerUps();
+  buildUpgrades();
+  buildHammers();
+  buildStats();
+  updateTop();
+
+  setInterval(() => {
+    buildStats();
+    updateTop();
+    buildPowerUps();
+  }, 1000);
+}
+
+document.addEventListener('DOMContentLoaded', init);
+
+window.__smash = { state, hammerProgression, hammerUpgrades, computeDPS5s };
+</script>
+</body>
+</html>
