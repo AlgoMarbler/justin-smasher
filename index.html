@@ -21,12 +21,57 @@
     --success:#00ff88;
     --shadow:0 4px 20px rgba(0,212,255,0.1);
     --glow:0 0 20px rgba(0,212,255,0.3);
+    --prestige:#ff00ff;
+    --prestige-glow:0 0 20px rgba(255,0,255,0.3);
   }
   
   *{box-sizing:border-box}
   
   html,body{height:100%;margin:0;color:var(--text);font-family:'Segoe UI',system-ui,Roboto,sans-serif;background:var(--bg);overflow:hidden}
   
+  /* Pause Overlay */
+  .pause-overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.85);
+    backdrop-filter:blur(10px);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:5000;
+    flex-direction:column;
+    gap:20px;
+  }
+  .pause-overlay.active{display:flex}
+  .pause-title{
+    font-size:64px;
+    font-weight:900;
+    color:var(--accent);
+    text-shadow:var(--glow);
+    animation:pulse 2s infinite;
+  }
+  .pause-subtitle{
+    font-size:18px;
+    color:var(--muted);
+  }
+  .pause-btn{
+    background:linear-gradient(135deg, var(--accent) 0%, var(--accent-dim) 100%);
+    color:#000;
+    border:0;
+    padding:16px 32px;
+    border-radius:8px;
+    cursor:pointer;
+    font-weight:700;
+    font-size:16px;
+    text-transform:uppercase;
+    letter-spacing:1px;
+    transition:all 0.3s;
+  }
+  .pause-btn:hover{
+    transform:scale(1.05);
+    box-shadow:var(--glow);
+  }
+
   /* Top bar - centered with neon glow */
   .top{
     display:flex;
@@ -78,6 +123,23 @@
   .perclick.active{
     color:var(--gold);
     text-shadow:0 0 10px rgba(255,215,0,0.5);
+  }
+  .prestige-display{
+    position:absolute;
+    right:20px;
+    top:50%;
+    transform:translateY(-50%);
+    text-align:right;
+  }
+  .prestige-level{
+    font-size:24px;
+    font-weight:800;
+    color:var(--prestige);
+    text-shadow:var(--prestige-glow);
+  }
+  .prestige-points{
+    font-size:12px;
+    color:var(--muted);
   }
 
   /* Layout */
@@ -139,6 +201,8 @@
     text-transform:uppercase;
     letter-spacing:0.5px;
     box-shadow:0 2px 8px rgba(0,212,255,0.3);
+    position:relative;
+    overflow:hidden;
   }
   .btn:hover:not(:disabled){
     transform:translateY(-2px);
@@ -160,6 +224,21 @@
   }
   .btn.secondary:hover:not(:disabled){
     background:rgba(0,212,255,0.1);
+  }
+  .btn.prestige{
+    background:linear-gradient(135deg, var(--prestige) 0%, #aa00aa 100%);
+    color:#fff;
+    box-shadow:0 2px 8px rgba(255,0,255,0.3);
+  }
+  .btn.prestige:hover:not(:disabled){
+    box-shadow:0 4px 12px rgba(255,0,255,0.5);
+  }
+  .btn.affordable{
+    animation:pulse-green 2s infinite;
+  }
+  @keyframes pulse-green{
+    0%,100%{box-shadow:0 0 5px rgba(0,255,136,0.5)}
+    50%{box-shadow:0 0 20px rgba(0,255,136,0.8)}
   }
   .muted{font-size:11px;color:var(--muted);line-height:1.4}
 
@@ -186,6 +265,49 @@
     pointer-events:none;
   }
   .arena-inner{position:relative;width:100%;height:100%;}
+  
+  /* Custom Crosshair */
+  .crosshair{
+    position:absolute;
+    width:20px;
+    height:20px;
+    pointer-events:none;
+    z-index:100;
+    transform:translate(-50%, -50%);
+    display:none;
+  }
+  .crosshair.active{display:block}
+  .crosshair::before,
+  .crosshair::after{
+    content:'';
+    position:absolute;
+    background:var(--accent);
+    box-shadow:0 0 10px var(--accent);
+  }
+  .crosshair::before{
+    width:2px;
+    height:20px;
+    left:50%;
+    transform:translateX(-50%);
+  }
+  .crosshair::after{
+    width:20px;
+    height:2px;
+    top:50%;
+    transform:translateY(-50%);
+  }
+  .crosshair-dot{
+    position:absolute;
+    width:4px;
+    height:4px;
+    background:var(--accent);
+    border-radius:50%;
+    top:50%;
+    left:50%;
+    transform:translate(-50%, -50%);
+    box-shadow:0 0 10px var(--accent);
+  }
+  
   .hammer{
     position:absolute;
     pointer-events:none;
@@ -209,6 +331,7 @@
     transition:left 350ms cubic-bezier(.2,.9,.2,1), top 350ms cubic-bezier(.2,.9,.2,1), transform 150ms linear;
     z-index:40;
     filter:drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+    cursor:crosshair;
   }
   .roach.hit{
     animation:roachHit 0.3s ease;
@@ -334,7 +457,7 @@
   .save-buttons{display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
   .save-area{
     width:100%;
-    height:260px;
+    height:200px;
     border:1px solid var(--border);
     border-radius:8px;
     padding:12px;
@@ -357,6 +480,9 @@
     border-top:1px solid var(--border);
     background:var(--bg);
     text-align:center;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
   }
 
   /* Achievement notification */
@@ -427,6 +553,134 @@
     z-index:45;
   }
 
+  /* Sound toggle button */
+  .sound-toggle{
+    position:fixed;
+    bottom:20px;
+    right:20px;
+    background:var(--panel);
+    border:1px solid var(--accent);
+    border-radius:50%;
+    width:50px;
+    height:50px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    font-size:24px;
+    z-index:100;
+    transition:all 0.3s;
+  }
+  .sound-toggle:hover{
+    background:var(--accent);
+    transform:scale(1.1);
+  }
+  .sound-toggle.muted{
+    opacity:0.5;
+    border-color:var(--muted);
+  }
+
+  /* Pause button */
+  .pause-btn-top{
+    position:fixed;
+    top:20px;
+    left:20px;
+    background:var(--panel);
+    border:1px solid var(--accent);
+    border-radius:8px;
+    padding:10px 16px;
+    cursor:pointer;
+    font-size:14px;
+    font-weight:600;
+    z-index:100;
+    transition:all 0.3s;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .pause-btn-top:hover{
+    background:var(--accent);
+    color:#000;
+  }
+
+  /* Hotkey hints */
+  .hotkey-hint{
+    position:absolute;
+    bottom:4px;
+    right:8px;
+    font-size:10px;
+    color:var(--muted);
+    opacity:0.6;
+  }
+
+  /* Auto-save indicator */
+  .autosave-indicator{
+    position:fixed;
+    bottom:80px;
+    right:20px;
+    background:var(--panel);
+    border:1px solid var(--success);
+    border-radius:8px;
+    padding:8px 12px;
+    font-size:12px;
+    color:var(--success);
+    opacity:0;
+    transition:opacity 0.3s;
+    z-index:100;
+  }
+  .autosave-indicator.show{opacity:1}
+
+  /* Prestige Modal */
+  .prestige-modal{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.9);
+    backdrop-filter:blur(10px);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:4000;
+    flex-direction:column;
+    gap:20px;
+    padding:40px;
+  }
+  .prestige-modal.active{display:flex}
+  .prestige-content{
+    background:var(--panel);
+    border:2px solid var(--prestige);
+    border-radius:16px;
+    padding:32px;
+    max-width:500px;
+    text-align:center;
+    box-shadow:var(--prestige-glow);
+  }
+  .prestige-title{
+    font-size:32px;
+    font-weight:900;
+    color:var(--prestige);
+    margin-bottom:16px;
+    text-shadow:var(--prestige-glow);
+  }
+  .prestige-desc{
+    font-size:14px;
+    color:var(--text);
+    line-height:1.6;
+    margin-bottom:24px;
+  }
+  .prestige-reward{
+    background:rgba(255,0,255,0.1);
+    border:1px solid var(--prestige);
+    border-radius:8px;
+    padding:16px;
+    margin-bottom:24px;
+  }
+  .prestige-reward-title{
+    font-size:18px;
+    font-weight:700;
+    color:var(--prestige);
+    margin-bottom:8px;
+  }
+
   @media (max-width:1100px){
     .game{grid-template-columns:1fr;grid-template-rows:auto 1fr auto;height:auto}
     .panel{height:250px}
@@ -441,21 +695,62 @@
 </style>
 </head>
 <body>
+  <!-- Pause Overlay -->
+  <div class="pause-overlay" id="pauseOverlay">
+    <div class="pause-title">⏸️ PAUSED</div>
+    <div class="pause-subtitle">Press P or click Resume to continue</div>
+    <button class="pause-btn" onclick="togglePause()">Resume Game</button>
+  </div>
+
+  <!-- Prestige Modal -->
+  <div class="prestige-modal" id="prestigeModal">
+    <div class="prestige-content">
+      <div class="prestige-title">✨ PRESTIGE AVAILABLE!</div>
+      <div class="prestige-desc">
+        Reset your progress to gain permanent bonuses!<br>
+        You keep: Achievements, Total Stats, Prestige Level<br>
+        You lose: Damage Currency, Hammers, Upgrades (but get bonuses!)
+      </div>
+      <div class="prestige-reward">
+        <div class="prestige-reward-title">Next Prestige Reward:</div>
+        <div id="prestigeRewardText">+10% Permanent Damage Bonus</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:8px">
+          Current: <span id="currentPrestigeBonus">0%</span> → New: <span id="newPrestigeBonus">10%</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:12px;justify-content:center">
+        <button class="btn prestige" onclick="doPrestige()">💎 Prestige Now</button>
+        <button class="btn secondary" onclick="closePrestigeModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <button class="pause-btn-top" onclick="togglePause()" title="Pause (P)">
+    ⏸️ <span class="hotkey-hint">[P]</span>
+  </button>
+
   <div class="top">
     <div class="top-inner">
       <div id="damageTop" class="damage-big">Damage: 0</div>
       <div id="perClickTop" class="perclick">Per Click: 0</div>
     </div>
+    <div class="prestige-display">
+      <div class="prestige-level" id="prestigeLevel">P0</div>
+      <div class="prestige-points" id="prestigePoints">0% Bonus</div>
+    </div>
   </div>
 
   <main class="game">
     <aside class="panel" style="min-width:200px">
-      <h3>⚡ Power-Ups</h3>
+      <h3>⚡ Power-Ups <span class="hotkey-hint">[1-3]</span></h3>
       <div id="powerUpsList" class="list"></div>
     </aside>
 
     <section class="arena" id="arena">
       <div id="arenaInner" class="arena-inner">
+        <div class="crosshair" id="crosshair">
+          <div class="crosshair-dot"></div>
+        </div>
         <div class="combo" id="comboDisplay">
           <div id="comboCount">0</div>
           <div class="combo-text">Combo!</div>
@@ -468,9 +763,9 @@
 
     <aside class="panel" style="padding:12px;display:flex;flex-direction:column">
       <div class="tabs">
-        <button id="tabShop" class="tabbtn active">Shop</button>
-        <button id="tabStats" class="tabbtn">Stats</button>
-        <button id="tabSave" class="tabbtn">Save</button>
+        <button id="tabShop" class="tabbtn active">Shop <span class="hotkey-hint">[Q]</span></button>
+        <button id="tabStats" class="tabbtn">Stats <span class="hotkey-hint">[W]</span></button>
+        <button id="tabSave" class="tabbtn">Save <span class="hotkey-hint">[E]</span></button>
       </div>
 
       <div id="shopArea" class="shop-container">
@@ -488,16 +783,25 @@
       <div id="statsArea" class="right-stats" style="display:none">
         <h4 style="margin:0 0 12px 0;font-size:12px;text-transform:uppercase;color:var(--accent)">📊 Statistics</h4>
         <div id="statsList" class="list"></div>
+        <div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--border)">
+          <button id="btnPrestige" class="btn prestige" style="width:100%;margin-bottom:10px" onclick="openPrestigeModal()">
+            💎 Prestige (<span id="prestigeRequirement">1M</span> damage)
+          </button>
+          <div class="muted" style="text-align:center;font-size:10px">
+            Reset for permanent damage bonuses!<br>
+            Requires: <span id="prestigeReqText">1,000,000</span> total damage
+          </div>
+        </div>
       </div>
 
       <div id="saveArea" class="right-stats" style="display:none;padding:12px;flex-direction:column">
         <div class="save-buttons">
-          <button id="btnSave" class="btn">💾 Save</button>
+          <button id="btnSave" class="btn">💾 Save <span class="hotkey-hint">[S]</span></button>
           <button id="btnExport" class="btn secondary">📤 Export</button>
           <button id="btnImportToggle" class="btn secondary">📥 Import</button>
         </div>
         <div id="importBox" style="display:none">
-          <div style="margin-bottom:8px;font-size:11px;color:var(--muted)">Paste save data below:</div>
+          <div style="margin-bottom:8px;font-size:11px;color:var(--muted)">Paste save data below (checksum protected):</div>
           <textarea id="importData" class="save-area" placeholder='Paste save data here...'></textarea>
           <div style="margin-top:10px;display:flex;gap:8px">
             <button id="btnDoImport" class="btn">Import</button>
@@ -506,20 +810,291 @@
         </div>
         <div style="margin-top:12px;color:var(--muted);font-size:11px;line-height:1.5">
           💡 Local saves use browser storage.<br>
-          Export creates a backup file you can keep safe.
+          Export creates a checksum-protected backup file.<br>
+          <strong>Auto-save every 30s</strong>
         </div>
       </div>
     </aside>
   </main>
 
-  <div class="footer">Put images tier-1.png … tier-12.png and victim.png next to this file.</div>
+  <div class="footer">
+    <span>Put images tier-1.png … tier-12.png and victim.png next to this file.</span>
+    <span><strong>Space</strong> = Hit Center | <strong>P</strong> = Pause | <strong>M</strong> = Mute</span>
+  </div>
 
   <div class="achievement" id="achievementPopup">
     <div class="achievement-title" id="achTitle">Achievement!</div>
     <div class="achievement-desc" id="achDesc">Description</div>
   </div>
 
+  <div class="sound-toggle" id="soundToggle" title="Toggle Sound (M)">🔊</div>
+  <div class="autosave-indicator" id="autosaveIndicator">💾 Auto-saved!</div>
+
 <script>
+
+// Checksum utility
+const Checksum = {
+  generate(data) {
+    const str = JSON.stringify(data);
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash;
+    }
+    return Math.abs(hash).toString(16).toUpperCase().padStart(8, '0');
+  },
+  
+  verify(saveData) {
+    if (!saveData || !saveData.checksum || !saveData.data) return false;
+    const computed = this.generate(saveData.data);
+    return computed === saveData.checksum;
+  },
+  
+  wrap(data) {
+    return {
+      version: 1,
+      timestamp: Date.now(),
+      checksum: this.generate(data),
+      data: data
+    };
+  }
+};
+
+// Pause System
+let isPaused = false;
+
+function togglePause() {
+  isPaused = !isPaused;
+  const overlay = document.getElementById('pauseOverlay');
+  if (isPaused) {
+    overlay.classList.add('active');
+    // Clear combo timer while paused
+    if (combo.timer) {
+      clearTimeout(combo.timer);
+      combo.timer = null;
+    }
+  } else {
+    overlay.classList.remove('active');
+    // Resume combo timer if combo was active
+    if (combo.count > 0 && !combo.timer) {
+      combo.timer = setTimeout(() => {
+        combo.count = 0;
+        combo.bonus = 0;
+        comboDisplay.classList.remove('active');
+        comboDisplay.classList.remove('yellow', 'green', 'cyan', 'magenta');
+        updateTop();
+      }, 2000);
+    }
+  }
+}
+
+// Prestige System
+const prestigeTiers = [
+  { requirement: 1000000, bonus: 0.10, name: "First Reset" },
+  { requirement: 10000000, bonus: 0.15, name: "Second Reset" },
+  { requirement: 100000000, bonus: 0.20, name: "Third Reset" },
+  { requirement: 1000000000, bonus: 0.25, name: "Master Reset" },
+  { requirement: 10000000000, bonus: 0.30, name: "Grandmaster" },
+  { requirement: 100000000000, bonus: 0.35, name: "Legend" },
+  { requirement: 1000000000000, bonus: 0.40, name: "Mythic" },
+  { requirement: 10000000000000, bonus: 0.50, name: "Transcendent" }
+];
+
+function getPrestigeInfo() {
+  const currentLevel = state.prestigeLevel || 0;
+  const nextTier = prestigeTiers[Math.min(currentLevel, prestigeTiers.length - 1)];
+  const currentBonus = prestigeTiers.slice(0, currentLevel).reduce((sum, t) => sum + t.bonus, 0);
+  return { currentLevel, nextTier, currentBonus };
+}
+
+function canPrestige() {
+  const { nextTier } = getPrestigeInfo();
+  return state.totalDamage >= nextTier.requirement;
+}
+
+function openPrestigeModal() {
+  if (!canPrestige()) {
+    alert(`Need ${formatLargeDown(getPrestigeInfo().nextTier.requirement)} total damage to prestige!`);
+    return;
+  }
+  const { currentLevel, nextTier, currentBonus } = getPrestigeInfo();
+  const newBonus = currentBonus + nextTier.bonus;
+  
+  document.getElementById('prestigeRewardText').textContent = `+${Math.floor(nextTier.bonus * 100)}% Permanent Damage Bonus`;
+  document.getElementById('currentPrestigeBonus').textContent = `${Math.floor(currentBonus * 100)}%`;
+  document.getElementById('newPrestigeBonus').textContent = `${Math.floor(newBonus * 100)}%`;
+  
+  document.getElementById('prestigeModal').classList.add('active');
+}
+
+function closePrestigeModal() {
+  document.getElementById('prestigeModal').classList.remove('active');
+}
+
+function doPrestige() {
+  const { currentLevel, nextTier, currentBonus } = getPrestigeInfo();
+  
+  // Increment prestige level
+  state.prestigeLevel = (state.prestigeLevel || 0) + 1;
+  state.prestigeBonus = currentBonus + nextTier.bonus;
+  
+  // Reset progress but keep achievements and stats
+  const preserved = {
+    prestigeLevel: state.prestigeLevel,
+    prestigeBonus: state.prestigeBonus,
+    totalDamage: state.totalDamage,
+    unlockedAchievements: state.unlockedAchievements,
+    startTime: state.startTime,
+    hits: state.hits,
+    misses: state.misses,
+    clicksTotal: state.clicksTotal,
+    maxCombo: combo.maxCombo
+  };
+  
+  // Reset currency and upgrades
+  state.damageCurrency = 0;
+  state.owned = new Set([1]);
+  state.equippedIndex = 0;
+  state.permanentDamageBonus = 0;
+  state.multiplier = 1;
+  state.multiplierTimeout = null;
+  state.discountActive = false;
+  state.discountClicksRemaining = 0;
+  sizeUpgrade.purchases = 0;
+  
+  // Reset hammer upgrades
+  hammerProgression.forEach(h => {
+    hammerUpgrades[h.id] = { forge:0, density:0, pierce:0 };
+  });
+  
+  // Reset powerups
+  powerUps.forEach(p => {
+    state[p.id] = { purchases:0, activeUntil:0 };
+  });
+  
+  // Restore preserved stats
+  Object.assign(state, preserved);
+  
+  // Reset combo
+  combo.count = 0;
+  combo.bonus = 0;
+  comboDisplay.classList.remove('active');
+  
+  // Update UI
+  hammerImg.src = hammerProgression[0].file;
+  applyHammerVisualSize();
+  closePrestigeModal();
+  updateTop();
+  buildPowerUps();
+  buildUpgrades();
+  buildHammers();
+  buildStats();
+  updatePrestigeDisplay();
+  
+  // Show notification
+  showAchievement('Prestige ' + state.prestigeLevel, `+${Math.floor(nextTier.bonus * 100)}% permanent damage!`);
+  SoundManager.play('achievement');
+}
+
+function updatePrestigeDisplay() {
+  const { currentLevel, currentBonus } = getPrestigeInfo();
+  document.getElementById('prestigeLevel').textContent = `P${currentLevel}`;
+  document.getElementById('prestigePoints').textContent = `${Math.floor(currentBonus * 100)}% Bonus`;
+  
+  const nextReq = prestigeTiers[currentLevel]?.requirement || 'MAX';
+  document.getElementById('prestigeRequirement').textContent = nextReq === 'MAX' ? 'MAX' : abbrOne(nextReq);
+  document.getElementById('prestigeReqText').textContent = nextReq === 'MAX' ? 'MAX' : formatLargeDown(nextReq);
+  
+  const btn = document.getElementById('btnPrestige');
+  if (canPrestige()) {
+    btn.style.opacity = '1';
+    btn.style.cursor = 'pointer';
+  } else {
+    btn.style.opacity = '0.5';
+  }
+}
+
+// Sound Manager with fallback for missing files
+const SoundManager = {
+  sounds: {},
+  muted: false,
+  volume: 0.5,
+  audioContext: null,
+  
+  init() {
+    // Create synthetic sounds using Web Audio API as fallback
+    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    
+    this.sounds = {
+      hit: this.createSound('hit', 200, 'sawtooth', 0.1),
+      crit: this.createSound('crit', 400, 'square', 0.15),
+      miss: this.createSound('miss', 150, 'triangle', 0.1),
+      upgrade: this.createSound('upgrade', 600, 'sine', 0.2),
+      purchase: this.createSound('purchase', 800, 'sine', 0.2),
+      achievement: this.createSound('achievement', 1000, 'sine', 0.3),
+      combo: this.createSound('combo', 500, 'sawtooth', 0.15),
+      powerup: this.createSound('powerup', 700, 'sine', 0.2),
+      hover: this.createSound('hover', 300, 'sine', 0.05)
+    };
+    
+    // Try to load real audio files if they exist
+    Object.keys(this.sounds).forEach(name => {
+      const audio = new Audio(name + '.mp3');
+      audio.volume = this.volume;
+      audio.oncanplay = () => {
+        this.sounds[name] = audio;
+      };
+    });
+    
+    // Load mute preference
+    const savedMute = localStorage.getItem('justinSmashMuted');
+    if (savedMute !== null) {
+      this.muted = savedMute === 'true';
+      this.updateIcon();
+    }
+  },
+  
+  createSound(name, frequency, type, duration) {
+    return {
+      play: () => {
+        if (this.muted) return;
+        try {
+          const osc = this.audioContext.createOscillator();
+          const gain = this.audioContext.createGain();
+          osc.connect(gain);
+          gain.connect(this.audioContext.destination);
+          osc.frequency.value = frequency;
+          osc.type = type;
+          gain.gain.setValueAtTime(this.volume * 0.3, this.audioContext.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + duration);
+          osc.start(this.audioContext.currentTime);
+          osc.stop(this.audioContext.currentTime + duration);
+        } catch(e) {}
+      }
+    };
+  },
+  
+  play(name) {
+    if (this.muted || !this.sounds[name]) return;
+    this.sounds[name].play();
+  },
+  
+  toggle() {
+    this.muted = !this.muted;
+    localStorage.setItem('justinSmashMuted', this.muted);
+    this.updateIcon();
+    return this.muted;
+  },
+  
+  updateIcon() {
+    const btn = document.getElementById('soundToggle');
+    if (btn) {
+      btn.textContent = this.muted ? '🔇' : '🔊';
+      btn.classList.toggle('muted', this.muted);
+    }
+  }
+};
 
 const hammerProgression = [
   { id:1, baseName:'Wood', displayName:'Wooden Hammer', file:'tier-1.png', baseDamageOriginal: 1, cost:10 },
@@ -539,9 +1114,9 @@ const hammerProgression = [
 const sizePurchaseCosts = [0, 1000, 5000, 20000, 100000, 500000, 2500000, 12500000, 50000000, 200000000];
 
 const powerUps = [
-  { id:'boost', name:'Damage Boost', desc:'2× damage for 30s', baseCost:200, duration:30000, type:'mult', multiplier:2 },
-  { id:'discount', name:'Discount', desc:'-20% costs for 30 clicks', baseCost:500, duration:30000, type:'discount', durationClicks:30 },
-  { id:'critboost', name:'Critical Strike', desc:'All hits are Critical Hits (10× damage) for 10s', baseCost:800, duration:10000, type:'forcecrit' }
+  { id:'boost', name:'Damage Boost', desc:'2× damage for 30s', baseCost:200, duration:30000, type:'mult', multiplier:2, hotkey:'1' },
+  { id:'discount', name:'Discount', desc:'-20% costs for 30 clicks', baseCost:500, duration:30000, type:'discount', durationClicks:30, hotkey:'2' },
+  { id:'critboost', name:'Critical Strike', desc:'All hits are Critical Hits (10× damage) for 10s', baseCost:800, duration:10000, type:'forcecrit', hotkey:'3' }
 ];
 
 const forgeMultipliers = [0, 0.50, 1.00, 1.50, 2.00, 3.00, 4.00];
@@ -607,7 +1182,10 @@ let state = {
   misses: 0,
   forceCrit: false,
   unlockedAchievements: new Set(),
-  startTime: Date.now()
+  startTime: Date.now(),
+  lastSaveTime: Date.now(),
+  prestigeLevel: 0,
+  prestigeBonus: 0
 };
 
 powerUps.forEach(p => { state[p.id] = { purchases:0, activeUntil:0 }; });
@@ -619,6 +1197,7 @@ hammerProgression.forEach(h => {
 
 let combo = { count: 0, timer: null, maxCombo: 0, bonus: 0 };
 let sizeUpgrade = { purchases: 0 };
+let autoSaveInterval = null;
 
 const damageTopEl = document.getElementById('damageTop');
 const perClickTopEl = document.getElementById('perClickTop');
@@ -629,10 +1208,14 @@ const popupContainer = document.getElementById('popupContainer');
 const comboDisplay = document.getElementById('comboDisplay');
 const comboCount = document.getElementById('comboCount');
 const achievementPopup = document.getElementById('achievementPopup');
+const autosaveIndicator = document.getElementById('autosaveIndicator');
+const crosshair = document.getElementById('crosshair');
 
 let arenaRect = null;
 let hammerSize = {width:120,height:120}, roachSize = {width:90,height:90};
 let damageHistory = [];
+let lastClickTime = 0;
+let clickCooldown = 50; // Minimum ms between clicks
 
 function toRoman(num){
   if (num <= 0) return 'I';
@@ -694,7 +1277,8 @@ function computeHammerDPCForIndex(idx){
   const forgeLevel = hammerUpgrades[hId]?.forge || 0;
   const forgeAdd = forgeMultipliers[forgeLevel] || 0;
   const sizeFactor = 1 + 0.25 * sizeUpgrade.purchases;
-  const dmg = Math.floor(base * (1 + forgeAdd) * sizeFactor + state.permanentDamageBonus);
+  const prestigeMult = 1 + (state.prestigeBonus || 0);
+  const dmg = Math.floor(base * (1 + forgeAdd) * sizeFactor * prestigeMult + state.permanentDamageBonus);
   return dmg;
 }
 
@@ -899,6 +1483,7 @@ function checkAchievements(){
     if (!state.unlockedAchievements.has(ach.id) && ach.check(state, hammerUpgrades, combo)){
       state.unlockedAchievements.add(ach.id);
       showAchievement(ach.name, ach.desc);
+      SoundManager.play('achievement');
       giveAchievementReward(ach.id);
     }
   });
@@ -936,6 +1521,11 @@ function updateCombo(hit){
     comboCount.style.transform = 'scale(1.3)';
     setTimeout(() => comboCount.style.transform = 'scale(1)', 100);
     
+    // Play combo sound every 10 hits
+    if (combo.count % 10 === 0) {
+      SoundManager.play('combo');
+    }
+    
     if (combo.timer) clearTimeout(combo.timer);
     combo.timer = setTimeout(() => {
       combo.count = 0;
@@ -958,12 +1548,12 @@ function updateCombo(hit){
 function buildPowerUps(){
   const container = document.getElementById('powerUpsList');
   container.innerHTML = '';
-  powerUps.forEach(p => {
+  powerUps.forEach((p, idx) => {
     const r = document.createElement('div'); 
     r.className = 'row';
     const left = document.createElement('div'); 
     left.style.flex = '1';
-    left.innerHTML = `<div style="font-weight:700;color:var(--text)">${p.name}</div><div class="muted">${p.desc}</div>`;
+    left.innerHTML = `<div style="font-weight:700;color:var(--text)">${p.name} <span style="color:var(--muted);font-size:10px">[${p.hotkey}]</span></div><div class="muted">${p.desc}</div>`;
     
     const st = state[p.id];
     const btn = document.createElement('button'); 
@@ -979,21 +1569,17 @@ function buildPowerUps(){
     } else {
       const cost = getEffectiveCost(currentCost);
       btn.textContent = abbrOne(cost);
-      btn.onclick = () => {
-        if (state.damageCurrency >= cost){
-          state.damageCurrency -= cost;
-          st.purchases = (st.purchases || 0) + 1;
-          st.activeUntil = Date.now() + p.duration;
-          activatePowerUp(p);
-          buildPowerUps(); 
-          updateTop();
-        } else {
-          flashBad();
-        }
-      };
+      
+      // Highlight affordable powerups
+      if (state.damageCurrency >= cost) {
+        btn.classList.add('affordable');
+      }
+      
+      btn.onclick = () => buyPowerUp(p);
     }
     
     r.addEventListener('mouseenter', (ev) => {
+      SoundManager.play('hover');
       const c = (st.activeUntil && Date.now() < st.activeUntil) ? `⏱️ ${Math.ceil((st.activeUntil-Date.now())/1000)}s remaining<br>` : '';
       let extraInfo = '';
       if (p.id === 'critboost') {
@@ -1013,6 +1599,25 @@ function buildPowerUps(){
     r.appendChild(btn); 
     container.appendChild(r);
   });
+}
+
+function buyPowerUp(p) {
+  if (isPaused) return;
+  const st = state[p.id];
+  const currentCost = Math.max(1, Math.floor(p.baseCost * Math.pow(1.5, st.purchases || 0)));
+  const cost = getEffectiveCost(currentCost);
+  
+  if (state.damageCurrency >= cost){
+    state.damageCurrency -= cost;
+    st.purchases = (st.purchases || 0) + 1;
+    st.activeUntil = Date.now() + p.duration;
+    SoundManager.play('powerup');
+    activatePowerUp(p);
+    buildPowerUps(); 
+    updateTop();
+  } else {
+    flashBad();
+  }
 }
 
 function activatePowerUp(p){
@@ -1063,10 +1668,18 @@ function buildUpgrades(){
   const massEffCost = getEffectiveCost(massNextCost);
   
   massBtn.textContent = `Buy ${abbrOne(massEffCost)}`;
+  
+  // Highlight affordable upgrades
+  if (state.damageCurrency >= massEffCost) {
+    massBtn.classList.add('affordable');
+  }
+  
   massBtn.onclick = () => {
+    if (isPaused) return;
     if (state.damageCurrency >= massEffCost){
       state.damageCurrency -= massEffCost;
       sizeUpgrade.purchases++;
+      SoundManager.play('upgrade');
       applyHammerVisualSize();
       updateTop();
       buildUpgrades();
@@ -1078,6 +1691,7 @@ function buildUpgrades(){
   };
   
   massRow.addEventListener('mouseenter', (ev) => {
+    SoundManager.play('hover');
     const nextBonus = (sizeUpgrade.purchases + 1) * 25;
     showTooltip(`<strong>Mass Upgrade</strong><br>Increases hammer size and base damage by 25% per level.<br><br>Current: +${curBonus}%<br>Next: +${nextBonus}%<br>Purchased: ${sizeUpgrade.purchases}<br>Cost: ${abbrOne(massNextCost)}`, ev.clientX, ev.clientY);
   });
@@ -1117,11 +1731,19 @@ function buildUpgrades(){
     } else {
       const effCost = getEffectiveCost(levelCost);
       btn.textContent = abbrOne(effCost);
+      
+      // Highlight affordable upgrades
+      if (state.damageCurrency >= effCost) {
+        btn.classList.add('affordable');
+      }
+      
       btn.onclick = () => {
+        if (isPaused) return;
         if (state.damageCurrency >= effCost){
           state.damageCurrency -= effCost;
           hUp[key] = nextLevel;
           hammerUpgrades[h.id] = hUp;
+          SoundManager.play('upgrade');
           buildUpgrades();
           buildHammers();
           updateTop();
@@ -1133,6 +1755,7 @@ function buildUpgrades(){
     }
     
     row.addEventListener('mouseenter', (ev) => {
+      SoundManager.play('hover');
       const curEffect = getEffect(current);
       const nextEffect = current >= max ? null : getEffect(nextLevel);
       let tooltipContent = `<strong>${h.baseName} ${name}</strong><br>Current: ${curEffect}`;
@@ -1206,6 +1829,7 @@ function buildHammers(){
       equipBtn.textContent = state.equippedIndex === idx ? '✓ Equipped' : 'Equip';
       equipBtn.disabled = (state.equippedIndex === idx);
       equipBtn.onclick = () => {
+        if (isPaused) return;
         state.equippedIndex = idx;
         hammerImg.src = h.file;
         applyHammerVisualSize();
@@ -1219,10 +1843,18 @@ function buildHammers(){
       const costBtn = document.createElement('button'); 
       costBtn.className = 'btn';
       costBtn.textContent = abbrOne(cost);
+      
+      // Highlight affordable hammers
+      if (state.damageCurrency >= cost) {
+        costBtn.classList.add('affordable');
+      }
+      
       costBtn.onclick = () => {
+        if (isPaused) return;
         if (state.damageCurrency >= cost){
           state.damageCurrency -= cost;
           state.owned.add(h.id);
+          SoundManager.play('purchase');
           autoEquipHighestOwned();
           if (!hammerUpgrades[h.id]) hammerUpgrades[h.id] = { forge:0, density:0, pierce:0 };
           buildHammers();
@@ -1261,7 +1893,8 @@ function buildStats(){
     `🔥 Best Combo: ${combo.maxCombo}x`,
     `🏆 Achievements: ${state.unlockedAchievements.size}/${achievements.length}`,
     `⏱️ Play Time: ${hours}h ${minutes}m ${seconds}s`,
-    state.discountActive ? `🏷️ Discount: ${state.discountClicksRemaining} clicks` : ''
+    state.discountActive ? `🏷️ Discount: ${state.discountClicksRemaining} clicks` : '',
+    state.prestigeLevel > 0 ? `💎 Prestige: ${state.prestigeLevel} (+${Math.floor((state.prestigeBonus || 0) * 100)}%)` : ''
   ].filter(Boolean);
 
   items.forEach(it => {
@@ -1270,6 +1903,8 @@ function buildStats(){
     row.innerHTML = `<div style="flex:1;font-size:13px">${it}</div>`;
     container.appendChild(row);
   });
+  
+  updatePrestigeDisplay();
 }
 
 function applyHammerVisualSize(){
@@ -1286,16 +1921,36 @@ function applyHammerVisualSize(){
 }
 
 function onArenaMove(e){
+  if (isPaused) return;
   ensureArenaRect();
   const x = e.clientX - arenaRect.left;
   const y = e.clientY - arenaRect.top;
+  
+  // Update crosshair position
+  crosshair.style.left = x + 'px';
+  crosshair.style.top = y + 'px';
+  
   const left = x - hammerSize.width;
   const top = y - hammerSize.height * 0.5;
   hammerImg.style.left = clamp(left, 0, Math.max(0, arenaRect.width - hammerSize.width)) + 'px';
   hammerImg.style.top = clamp(top, 0, Math.max(0, arenaRect.height - hammerSize.height)) + 'px';
 }
 
+function onArenaEnter() {
+  crosshair.classList.add('active');
+}
+
+function onArenaLeave() {
+  crosshair.classList.remove('active');
+}
+
 function onArenaClick(e){
+  if (isPaused) return;
+  // Prevent rapid clicking (cooldown)
+  const now = Date.now();
+  if (now - lastClickTime < clickCooldown) return;
+  lastClickTime = now;
+  
   ensureArenaRect();
   hammerImg.classList.remove('rest');
   hammerImg.classList.add('down');
@@ -1351,9 +2006,12 @@ function performHit(isAuto = false, clickX = null, clickY = null){
   if (isCrit){
     damageToApply *= 10;
     flashVictim();
+    SoundManager.play('crit');
+  } else {
+    SoundManager.play('hit');
   }
 
-  // Apply combo bonus (+10% per combo, max 500%)
+  // Apply combo bonus (+10% per combo, max +500%)
   const comboBonus = getComboBonus();
   const baseDamage = damageToApply;
   damageToApply = Math.floor(damageToApply * (1 + comboBonus));
@@ -1423,7 +2081,7 @@ function clamp(v, a, b){
 }
 
 function saveToLocal(){
-  const save = {
+  const saveData = {
     damageCurrency: state.damageCurrency,
     totalDamage: state.totalDamage,
     equippedIndex: state.equippedIndex,
@@ -1437,10 +2095,19 @@ function saveToLocal(){
     misses: state.misses,
     hammerUpgrades: hammerUpgrades,
     unlockedAchievements: Array.from(state.unlockedAchievements),
-    powerStates: powerUps.reduce((acc, p) => { acc[p.id] = state[p.id]; return acc; }, {})
+    powerStates: powerUps.reduce((acc, p) => { acc[p.id] = state[p.id]; return acc; }, {}),
+    prestigeLevel: state.prestigeLevel,
+    prestigeBonus: state.prestigeBonus,
+    maxCombo: combo.maxCombo
   };
-  localStorage.setItem('smashJustinSave', JSON.stringify(save));
-  alert('💾 Game saved!');
+  
+  const wrapped = Checksum.wrap(saveData);
+  localStorage.setItem('smashJustinSave', JSON.stringify(wrapped));
+  state.lastSaveTime = Date.now();
+  
+  // Show auto-save indicator
+  autosaveIndicator.classList.add('show');
+  setTimeout(() => autosaveIndicator.classList.remove('show'), 2000);
 }
 
 function exportSaveAsFile(){
@@ -1449,14 +2116,22 @@ function exportSaveAsFile(){
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `smashJustin_${new Date().toISOString().slice(0,10)}.json`;
+  a.download = `smashJustin_${new Date().toISOString().slice(0,10)}_${state.prestigeLevel || 0}P.json`;
   a.click();
   URL.revokeObjectURL(url);
 }
 
 function importFromJSON(jsonStr){
   try {
-    const s = JSON.parse(jsonStr);
+    const wrapped = JSON.parse(jsonStr);
+    
+    // Verify checksum
+    if (!Checksum.verify(wrapped)) {
+      alert('❌ Import failed: Save data has been tampered with or is corrupted!');
+      return;
+    }
+    
+    const s = wrapped.data;
     state.damageCurrency = s.damageCurrency || 0;
     state.totalDamage = s.totalDamage || 0;
     state.equippedIndex = s.equippedIndex || 0;
@@ -1469,6 +2144,9 @@ function importFromJSON(jsonStr){
     state.hits = s.hits || 0;
     state.misses = s.misses || 0;
     state.unlockedAchievements = new Set(s.unlockedAchievements || []);
+    state.prestigeLevel = s.prestigeLevel || 0;
+    state.prestigeBonus = s.prestigeBonus || 0;
+    combo.maxCombo = s.maxCombo || 0;
     
     if (s.hammerUpgrades){
       for (const id in s.hammerUpgrades) hammerUpgrades[id] = s.hammerUpgrades[id];
@@ -1484,15 +2162,76 @@ function importFromJSON(jsonStr){
     buildUpgrades();
     buildHammers();
     buildStats();
+    updatePrestigeDisplay();
     checkAchievements();
-    alert('📥 Save loaded successfully!');
+    alert('📥 Save loaded successfully! (Checksum verified)');
   } catch (err){
-    alert('❌ Import failed: Invalid save data');
+    alert('❌ Import failed: Invalid save data format');
   }
+}
+
+function setupHotkeys() {
+  document.addEventListener('keydown', (e) => {
+    // Don't trigger if typing in a text area
+    if (e.target.tagName === 'TEXTAREA') return;
+    
+    switch(e.key.toLowerCase()) {
+      case 'p':
+        e.preventDefault();
+        togglePause();
+        break;
+      case ' ':
+        if (isPaused) return;
+        e.preventDefault();
+        // Hit center of arena
+        const centerX = arenaRect.width / 2;
+        const centerY = arenaRect.height / 2;
+        const fakeEvent = { clientX: arenaRect.left + centerX, clientY: arenaRect.top + centerY };
+        onArenaClick(fakeEvent);
+        break;
+      case '1':
+        if (!isPaused) buyPowerUp(powerUps[0]);
+        break;
+      case '2':
+        if (!isPaused) buyPowerUp(powerUps[1]);
+        break;
+      case '3':
+        if (!isPaused) buyPowerUp(powerUps[2]);
+        break;
+      case 'q':
+        document.getElementById('tabShop').click();
+        break;
+      case 'w':
+        document.getElementById('tabStats').click();
+        break;
+      case 'e':
+        document.getElementById('tabSave').click();
+        break;
+      case 's':
+        if (document.getElementById('saveArea').style.display !== 'none') {
+          saveToLocal();
+        }
+        break;
+      case 'm':
+        SoundManager.toggle();
+        break;
+    }
+  });
 }
 
 function init(){
   ensureArenaRect();
+
+  // Initialize sound manager
+  SoundManager.init();
+  
+  // Sound toggle button
+  document.getElementById('soundToggle').addEventListener('click', () => {
+    SoundManager.toggle();
+  });
+
+  // Setup hotkeys
+  setupHotkeys();
 
   hammerImg.onload = () => {
     applyHammerVisualSize();
@@ -1517,6 +2256,8 @@ function init(){
   hammerImg.src = hammerProgression[state.equippedIndex].file;
 
   arenaInner.addEventListener('mousemove', onArenaMove);
+  arenaInner.addEventListener('mouseenter', onArenaEnter);
+  arenaInner.addEventListener('mouseleave', onArenaLeave);
   arenaInner.addEventListener('click', onArenaClick);
   
   window.addEventListener('resize', () => {
@@ -1571,17 +2312,28 @@ function init(){
   buildHammers();
   buildStats();
   updateTop();
+  updatePrestigeDisplay();
 
+  // Auto-save every 30 seconds
+  autoSaveInterval = setInterval(() => {
+    saveToLocal();
+  }, 30000);
+
+  // Update UI every second
   setInterval(() => {
-    buildStats();
-    updateTop();
-    buildPowerUps();
+    if (!isPaused) {
+      buildStats();
+      updateTop();
+      buildPowerUps();
+      buildUpgrades();
+      buildHammers();
+    }
   }, 1000);
 }
 
 document.addEventListener('DOMContentLoaded', init);
 
-window.__smash = { state, hammerProgression, hammerUpgrades, computeDPS5s };
+window.__smash = { state, hammerProgression, hammerUpgrades, computeDPS5s, Checksum, togglePause };
 </script>
 </body>
 </html>
